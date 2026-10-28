@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { ArrowRight, Bookmark, Menu, X } from 'lucide-react'
 import Logo from '../common/Logo'
 import Button from '../ui/Button'
+import { useAuth } from '../../hooks/useAuth'
 import { useBookmarks } from '../../hooks/useBookmarks'
 import { DIAGNOSTIC_PATH, ROUTES, explorePath } from '../../utils/routes'
 import { cn } from '../../utils/cn'
@@ -20,6 +21,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(() => window.scrollY > 8)
   const { count } = useBookmarks()
+  const { user, openAuth } = useAuth()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -94,6 +96,23 @@ export default function Navbar() {
               </span>
             )}
           </Link>
+          {user ? (
+            <Link
+              to={ROUTES.account}
+              onClick={close}
+              className="hidden h-10 items-center rounded-full px-3.5 text-sm font-semibold text-ink-800 transition hover:bg-ivory-200 sm:inline-flex"
+            >
+              Account
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => openAuth('login')}
+              className="hidden h-10 items-center rounded-full px-3.5 text-sm font-semibold text-ink-800 transition hover:bg-ivory-200 sm:inline-flex"
+            >
+              Sign in
+            </button>
+          )}
           <div className="hidden sm:block">
             <Button to={DIAGNOSTIC_PATH} size="sm" variant="accent" iconRight={ArrowRight}>
               Take diagnostic
@@ -132,6 +151,28 @@ export default function Navbar() {
                 <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
               </NavLink>
             ))}
+            {user ? (
+              <NavLink
+                to={ROUTES.account}
+                onClick={close}
+                className="flex items-center justify-between border-b border-line-soft py-3.5 font-display text-xl font-medium text-ink-900"
+              >
+                Account
+                <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
+              </NavLink>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  close()
+                  openAuth('login')
+                }}
+                className="flex items-center justify-between border-b border-line-soft py-3.5 text-left font-display text-xl font-medium text-ink-900"
+              >
+                Sign in
+                <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
+              </button>
+            )}
             <Button to={DIAGNOSTIC_PATH} onClick={close} variant="accent" size="lg" className="mt-5" iconRight={ArrowRight}>
               Take the diagnostic test
             </Button>

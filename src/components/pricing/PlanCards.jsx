@@ -4,10 +4,10 @@ import Button from '../ui/Button'
 import Reveal from '../ui/Reveal'
 import { PLANS } from '../../data/plans'
 import { formatPrice } from '../../utils/format'
-import { explorePath } from '../../utils/routes'
+import { ROUTES, explorePath } from '../../utils/routes'
 import { cn } from '../../utils/cn'
 
-export default function PlanCards({ billing, isPremium, onUpgrade, onDowngrade }) {
+export default function PlanCards({ billing, isPremium, onUpgrade }) {
   const [free, premium] = PLANS
   const yearly = billing === 'yearly'
   const price = yearly ? premium.price.yearly : premium.price.monthly
@@ -35,8 +35,8 @@ export default function PlanCards({ billing, isPremium, onUpgrade, onDowngrade }
           </ul>
           <div className="mt-auto pt-8">
             {isPremium ? (
-              <Button variant="outline" size="lg" className="w-full" onClick={onDowngrade}>
-                Switch to Free (demo)
+              <Button to={ROUTES.account} variant="outline" size="lg" className="w-full">
+                View my account
               </Button>
             ) : (
               <Button to={explorePath({ price: 'free' })} variant="outline" size="lg" className="w-full">
@@ -53,7 +53,7 @@ export default function PlanCards({ billing, isPremium, onUpgrade, onDowngrade }
             <h2 className="text-2xl font-semibold text-ivory-50">{premium.name}</h2>
             {isPremium && (
               <Badge tone="sage" icon={Check}>
-                Active on this device
+                Active
               </Badge>
             )}
           </div>
@@ -65,7 +65,7 @@ export default function PlanCards({ billing, isPremium, onUpgrade, onDowngrade }
           <p className="mt-1 min-h-5 text-sm text-ivory-300">
             {yearly
               ? `About ${formatPrice(perMonth)} a month${savings > 0 ? `, saving ${formatPrice(savings)} a year` : ''}`
-              : 'Billed monthly, cancel any time (demo)'}
+              : 'Billed once for 30 days, no auto-renewal'}
           </p>
           <ul className="mt-7 space-y-3">
             {premium.highlights.map((item) => (

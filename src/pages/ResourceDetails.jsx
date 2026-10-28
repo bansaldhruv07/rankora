@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowRight, Check, ChevronRight, Info, Lock } from 'lucide-react'
+import { ArrowRight, Check, ChevronRight, Download, Info, Lock } from 'lucide-react'
 import BookmarkButton from '../components/common/BookmarkButton'
 import ResourceCard from '../components/common/ResourceCard'
 import Badge, { DifficultyBadge, SubjectBadge } from '../components/ui/Badge'
@@ -9,7 +9,10 @@ import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
 import SectionHeading from '../components/ui/SectionHeading'
 import { TabPanel, Tabs } from '../components/ui/Tabs'
+import CheckoutModal from '../components/pricing/CheckoutModal'
+import { useAuth } from '../hooks/useAuth'
 import { usePlan } from '../hooks/usePlan'
+import { api, noteFileUrl } from '../lib/api'
 import { getRelatedResources, getResourceById } from '../data/resources'
 import { formatPrice } from '../utils/format'
 import { RESOURCE_TYPES } from '../utils/resourceMeta'
@@ -19,13 +22,30 @@ import { cn } from '../utils/cn'
 
 function ResourceView({ resource }) {
   const { isPremium } = usePlan()
+  const { user, access, openAuth } = useAuth()
   const [tab, setTab] = useState('sample')
+  const [checkout, setCheckout] = useState({ open: false, key: 0 })
+  // The server is the source of truth for price; the static value is the offline fallback.
+  const [livePrice, setLivePrice] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    api(`/products/${encodeURIComponent(resource.id)}`)
+      .then((json) => active && setLivePrice(json.data.price))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [resource.id])
+
+  const price = livePrice ?? resource.price
+  const owned = isPremium || access.productSlugs.includes(resource.id)
 
   const type = RESOURCE_TYPES[resource.type]
   const TypeIcon = type.icon
   const theme = getSubjectTheme(resource.subject)
   const isMock = resource.type === 'mock'
-  const locked = resource.price > 0 && !isPremium
+  const locked = price > 0 && !owned
   const related = getRelatedResources(resource, 3)
 
   const startPath = isMock
@@ -118,29 +138,39 @@ function ResourceView({ resource }) {
                 <p
                   className={cn(
                     'mt-1 font-display text-5xl font-semibold',
-                    resource.price === 0 ? 'text-sage-700' : 'text-ink-900',
+                    price === 0 ? 'text-sage-700' : 'text-ink-900',
                   )}
                 >
-                  {formatPrice(resource.price)}
+                  {formatPrice(price)}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                  {resource.price === 0
+                  {price === 0
                     ? 'Included in the free plan.'
-                    : isPremium
-                      ? 'Unlocked: Premium is active on this device.'
-                      : 'Included with Premium. Demo pricing, no payment is taken.'}
+                    : owned
+                      ? isPremium
+                        ? 'Unlocked: Premium is active on your account.'
+                        : 'Unlocked: you own this resource.'
+                      : 'Buy this resource, or get everything with Premium.'}
                 </p>
-                {resource.price > 0 && isPremium && (
+                {price > 0 && owned && (
                   <Badge tone="sage" icon={Check} className="mt-3">
-                    Premium unlocked
+                    {isPremium ? 'Premium unlocked' : 'Purchased'}
                   </Badge>
                 )}
 
                 <div className="mt-6 flex flex-col gap-3">
                   {locked ? (
                     <>
-                      <Button to={ROUTES.pricing} variant="accent" size="lg" icon={Lock}>
-                        Unlock with Premium (demo)
+                      <Button
+                        variant="accent"
+                        size="lg"
+                        icon={Lock}
+                        onClick={() => setCheckout((prev) => ({ open: true, key: prev.key + 1 }))}
+                      >
+                        Buy for {formatPrice(price)}
+                      </Button>
+                      <Button to={ROUTES.pricing} variant="outline" size="lg">
+                        Or get Premium
                       </Button>
                       {!isMock && (
                         <Button to={startPath} variant="outline" size="lg">
@@ -151,6 +181,16 @@ function ResourceView({ resource }) {
                   ) : (
                     <Button to={startPath} variant="accent" size="lg" iconRight={ArrowRight}>
                       {startLabel}
+                    </Button>
+                  )}
+                  {!isMock && !locked && (
+                    <Button
+                      {...(user ? { href: noteFileUrl(resource.id), target: '_blank', rel: 'noopener' } : { onClick: () => openAuth('login') })}
+                      variant="outline"
+                      size="lg"
+                      icon={Download}
+                    >
+                      {user ? 'Download PDF' : 'Sign in to download PDF'}
                     </Button>
                   )}
                   <BookmarkButton
@@ -165,6 +205,15 @@ function ResourceView({ resource }) {
           </div>
         </div>
       </div>
+
+      <CheckoutModal
+        key={checkout.key}
+        open={checkout.open}
+        onClose={() => setCheckout((prev) => ({ ...prev, open: false }))}
+        slug={resource.id}
+        title={resource.title}
+        fallbackAmount={price}
+      />
 
       <section className="page-container py-12 sm:py-16">
         <Tabs tabs={tabs} value={tab} onChange={setTab} idPrefix="resource" label="Resource details" />
@@ -186,8 +235,7 @@ function ResourceView({ resource }) {
               </ul>
               <p className="mt-7 flex gap-2 rounded-xl bg-ivory-100 p-4 text-sm leading-relaxed text-ink-600">
                 <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-ink-500" />
-                Demo content: this section is the preview available in the frontend. A live product would open the
-                full document here.
+                This is the free preview. The full document is delivered as a personalised PDF once you have access.
               </p>
             </Card>
 

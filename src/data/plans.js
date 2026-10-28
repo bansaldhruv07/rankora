@@ -18,7 +18,7 @@ export const PLANS = [
     name: 'Premium',
     blurb: 'The complete set for steady, chapter-by-chapter preparation.',
     price: { monthly: 399, yearly: 2999 },
-    cta: 'Try Premium (demo)',
+    cta: 'Get Premium',
     highlights: [
       'Everything in Free',
       'All chapter-wise PYQ sets with reviewed solutions',
@@ -42,4 +42,4 @@ export const COMPARISON = [
 ]
 
 export const CHECKOUT_NOTE =
-  'Demo checkout: no payment is taken and no account is created. Premium is unlocked on this device only so you can try the full experience.'
+  'Premium is a one-time payment for the period you choose, with no auto-renewal. You need an account to purchase, and payments are processed by Razorpay.'

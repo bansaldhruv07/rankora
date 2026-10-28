@@ -5,6 +5,7 @@ export const ROUTES = {
   mocks: '/mock-tests',
   analytics: '/analytics',
   pricing: '/pricing',
+  account: '/account',
 }
 
 export const DIAGNOSTIC_PATH = '/practice?mode=diagnostic'

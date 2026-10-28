@@ -1,7 +1,9 @@
 import { Routes, Route } from "react-router-dom";
 import ScrollToTop from "./components/common/ScrollToTop";
 import Layout from "./components/layout/Layout";
+import AuthProvider from "./components/auth/AuthProvider";
 import ToastProvider from "./components/ui/ToastProvider";
+import Account from "./pages/Account";
 import Analytics from "./pages/Analytics";
 import DesignSystem from "./pages/DesignSystem";
 import Explore from "./pages/Explore";
@@ -15,6 +17,7 @@ import ResourceDetails from "./pages/ResourceDetails";
 export default function App() {
   return (
     <ToastProvider>
+      <AuthProvider>
       <ScrollToTop />
       <a href="#main" className="skip-link">
         Skip to content
@@ -28,10 +31,12 @@ export default function App() {
           <Route path="/mock-tests" element={<MockTests />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/design" element={<DesignSystem />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
+      </AuthProvider>
     </ToastProvider>
   );
 }

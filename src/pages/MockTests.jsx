@@ -8,7 +8,6 @@ import ResultsView from '../components/practice/ResultsView'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
-import { useToast } from '../hooks/useToast'
 import { usePlan } from '../hooks/usePlan'
 import { MOCK_TESTS, getMockMaxScore, getMockTestById } from '../data/mockTests'
 import { getQuestionById } from '../data/questions'
@@ -21,8 +20,7 @@ const minus = (value) => String(value).replace('-', '−')
 
 function MockView() {
   const [params] = useSearchParams()
-  const { isPremium, setPlan } = usePlan()
-  const toast = useToast()
+  const { isPremium } = usePlan()
   const requested = params.get('test')
   const test = getMockTestById(requested)
   const [session, setSession] = useState(null)
@@ -152,21 +150,11 @@ function MockView() {
                   This test is part of Premium
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                  Demo only: no payment is taken. Unlock Premium on this device to try the test.
+                  Get Premium to unlock every full and sectional mock.
                 </p>
                 <div className="mt-5 flex flex-col gap-3">
-                  <Button
-                    variant="accent"
-                    size="lg"
-                    onClick={() => {
-                      setPlan('premium')
-                      toast({ title: 'Premium unlocked on this device', description: 'Demo mode, nothing was charged.' })
-                    }}
-                  >
-                    Unlock on this device (demo)
-                  </Button>
-                  <Button to={ROUTES.pricing} variant="outline" size="lg">
-                    See pricing
+                  <Button to={ROUTES.pricing} variant="accent" size="lg">
+                    See Premium
                   </Button>
                 </div>
               </div>

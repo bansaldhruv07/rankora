@@ -39,7 +39,7 @@ export const FAQ = [
     id: 'pay',
     question: 'Can I actually pay for Premium?',
     answer:
-      'Not in this demo. The checkout is a walkthrough only: no payment is taken and no card details are collected. It unlocks Premium on this device so you can try every screen.',
+      'Yes. Sign in, pick a plan and pay through Razorpay (UPI, cards and netbanking). Access is unlocked only after the payment is verified on our server. Card and UPI details never touch Rankora.',
   },
   {
     id: 'advanced',

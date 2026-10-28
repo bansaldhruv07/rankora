@@ -5,7 +5,6 @@ export const STORAGE_KEYS = {
   mistakeEdits: 'rankora:mistake-edits',
   planProgress: 'rankora:plan-progress',
   showSample: 'rankora:show-sample',
-  plan: 'rankora:plan',
 }
 
 export const MARKING = { correct: 4, wrong: -1 }

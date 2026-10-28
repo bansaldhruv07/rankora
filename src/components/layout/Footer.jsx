@@ -78,7 +78,7 @@ export default function Footer() {
         <div className="mt-12 flex flex-col gap-2 border-t border-line pt-6 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Rankora</p>
           <p>
-            Frontend demo: no accounts, payments or AI are connected. Sample content is written for illustration.
+            Practice, mocks and analytics run in your browser. Sample content is written for illustration.
           </p>
         </div>
       </div>
