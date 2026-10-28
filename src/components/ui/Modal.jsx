@@ -61,7 +61,7 @@ export default function Modal({ open, onClose, title, description, children, foo
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] grid place-items-end sm:place-items-center">
+    <div className="fixed inset-0 z-80 grid place-items-end sm:place-items-center">
       <div
         aria-hidden="true"
         onClick={() => closeRef.current?.()}

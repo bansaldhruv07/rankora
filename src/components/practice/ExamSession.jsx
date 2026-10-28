@@ -133,7 +133,7 @@ export default function ExamSession({
     <div
       role="region"
       aria-label={`${title} exam interface`}
-      className="fixed inset-0 z-[60] flex flex-col bg-ivory-50"
+      className="fixed inset-0 z-60 flex flex-col bg-ivory-50"
     >
       <header className="shrink-0 border-b border-line bg-ivory-50">
         <div className="page-container flex flex-wrap items-center justify-between gap-3 py-3">
@@ -249,7 +249,7 @@ export default function ExamSession({
                         className={cn(
                           "flex cursor-pointer items-center gap-4 rounded-xl border px-4 py-3.5 transition duration-200 focus-within:ring-2 focus-within:ring-ember-500 focus-within:ring-offset-2 focus-within:ring-offset-ivory-50",
                           checked
-                            ? "border-ink-900 bg-ink-900/[0.04] shadow-soft"
+                            ? "border-ink-900 bg-ink-900/4 shadow-soft"
                             : "border-line bg-[#fffdf8] hover:-translate-y-px hover:border-ember-500",
                         )}
                       >

@@ -177,7 +177,7 @@ function MockView() {
                     type="checkbox"
                     checked={agreed}
                     onChange={(event) => setAgreed(event.target.checked)}
-                    className="mt-1 size-4 shrink-0 accent-[#c2571a]"
+                    className="mt-1 size-4 shrink-0 accent-ember-500"
                   />
                   I have read the instructions and I am ready to begin.
                 </label>
