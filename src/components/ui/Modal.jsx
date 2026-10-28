@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { lockScroll } from '../../utils/scrollLock'
 
 const SIZES = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl' }
 const FOCUSABLE =
@@ -48,12 +49,11 @@ export default function Modal({ open, onClose, title, description, children, foo
     }
 
     document.addEventListener('keydown', onKey)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockScroll()
 
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previousOverflow
+      unlock()
       previous?.focus?.()
     }
   }, [open])
@@ -61,7 +61,7 @@ export default function Modal({ open, onClose, title, description, children, foo
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-80 grid place-items-end sm:place-items-center">
+    <div className="fixed inset-0 z-[80] grid place-items-end sm:place-items-center">
       <div
         aria-hidden="true"
         onClick={() => closeRef.current?.()}
