@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, Layers, Plus, UploadCloud } from 'lucide-react'
+import { Eye, Layers, Plus, Trash2, UploadCloud } from 'lucide-react'
 import { Confirm, ErrorNote, Pager, PageTitle, StatusBadge, Table, INPUT } from '../../components/admin/ui'
 import UploadPanel from '../../components/admin/UploadPanel'
 import ProductCover from '../../components/store/ProductCover'
@@ -43,7 +43,8 @@ export default function NotesAdmin() {
     let failed = []
     for (const id of ids) {
       try {
-        await api(`/admin/products/${id}/${action}`, { method: 'POST' })
+        if (action === 'delete') await api(`/admin/products/${id}`, { method: 'DELETE' })
+        else await api(`/admin/products/${id}/${action}`, { method: 'POST' })
       } catch (err) {
         failed.push(`${rows.find((r) => r.id === id)?.title ?? id}: ${err.message}`)
       }
@@ -53,7 +54,7 @@ export default function NotesAdmin() {
     setSelected(new Set())
     reload()
     if (failed.length) toast({ title: `${ids.length - failed.length} of ${ids.length} done`, description: failed[0], tone: 'info', duration: 7000 })
-    else toast({ title: `${ids.length} ${ids.length === 1 ? 'item' : 'items'} updated` })
+    else toast({ title: `${ids.length} ${ids.length === 1 ? 'item' : 'items'} ${action === 'delete' ? 'deleted' : 'updated'}` })
   }
 
   const newBundle = async () => {
@@ -131,6 +132,7 @@ export default function NotesAdmin() {
               Publish
             </Button>
           )}
+          <Button size="sm" variant="ghost" icon={Trash2} className="text-danger-500" aria-label={`Delete ${r.title}`} onClick={() => setConfirm({ action: 'delete', label: 'Delete', danger: true, ids: [r.id] })} disabled={busy} />
         </div>
       ),
     },
@@ -214,6 +216,9 @@ export default function NotesAdmin() {
           <Button size="sm" variant="soft" onClick={() => setConfirm({ action: 'archive', label: 'Archive' })}>
             Archive
           </Button>
+          <Button size="sm" variant="soft" icon={Trash2} onClick={() => setConfirm({ action: 'delete', label: 'Delete', danger: true })}>
+            Delete
+          </Button>
           <button type="button" onClick={() => setSelected(new Set())} className="ml-auto underline underline-offset-4">
             Clear
           </button>
@@ -253,15 +258,17 @@ export default function NotesAdmin() {
 
       <Confirm
         open={Boolean(confirm)}
-        title={`${confirm?.label ?? ''} ${selected.size} ${selected.size === 1 ? 'item' : 'items'}?`}
+        title={`${confirm?.label ?? ''} ${(confirm?.ids ?? [...selected]).length} ${(confirm?.ids ?? [...selected]).length === 1 ? 'item' : 'items'}?`}
         confirmLabel={confirm?.label}
+        danger={confirm?.danger}
         busy={busy}
         onClose={() => setConfirm(null)}
-        onConfirm={() => act([...selected], confirm.action)}
+        onConfirm={() => act(confirm.ids ?? [...selected], confirm.action)}
       >
         {confirm?.action === 'publish' && 'Published items become visible and purchasable straight away.'}
         {confirm?.action === 'unpublish' && 'They disappear from the store. People who already bought them keep their access.'}
         {confirm?.action === 'archive' && 'They are taken off sale. People who already bought them keep their access.'}
+        {confirm?.action === 'delete' && 'This permanently removes the item and its files. Anything that has been ordered cannot be deleted; archive it instead.'}
       </Confirm>
     </>
   )
