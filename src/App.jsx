@@ -3,8 +3,10 @@ import { Navigate, Routes, Route } from "react-router-dom";
 import ScrollToTop from "./components/common/ScrollToTop";
 import Layout from "./components/layout/Layout";
 import AuthProvider from "./components/auth/AuthProvider";
+import CartProvider from "./components/cart/CartProvider";
 import ToastProvider from "./components/ui/ToastProvider";
 import Account from "./pages/Account";
+import Cart from "./pages/Cart";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import Pricing from "./pages/Pricing";
@@ -28,6 +30,7 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
+      <CartProvider>
       <ScrollToTop />
       <a href="#main" className="skip-link">
         Skip to content
@@ -45,6 +48,7 @@ export default function App() {
           <Route path="/resource/:id" element={<Navigate to="/notes" replace />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/notes/:slug" element={<NoteDetails />} />
+          <Route path="/cart" element={<Cart />} />
           <Route path="/library" element={<Library />} />
           <Route path="/policies" element={<Policies />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -54,6 +58,7 @@ export default function App() {
         </Route>
       </Routes>
       </Suspense>
+      </CartProvider>
       </AuthProvider>
     </ToastProvider>
   );

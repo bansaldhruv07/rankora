@@ -11,7 +11,10 @@ import { useToast } from '../../hooks/useToast'
 import { api } from '../../lib/api'
 import { CLASS_LABELS, formatPrice } from '../../utils/format'
 
-const selectClass = `${INPUT} sm:w-auto`
+// The standard terms for a note: sold at ₹99 against an original ₹199, and included in the Premium plan.
+const STANDARD = { price: 99, mrp: 199, premiumEligible: true }
+
+const selectClass =`${INPUT} sm:w-auto`
 
 export default function NotesAdmin() {
   const toast = useToast()
@@ -44,6 +47,7 @@ export default function NotesAdmin() {
     for (const id of ids) {
       try {
         if (action === 'delete') await api(`/admin/products/${id}`, { method: 'DELETE' })
+        else if (action === 'standard') await api(`/admin/products/${id}`, { method: 'PATCH', body: STANDARD })
         else await api(`/admin/products/${id}/${action}`, { method: 'POST' })
       } catch (err) {
         failed.push(`${rows.find((r) => r.id === id)?.title ?? id}: ${err.message}`)
@@ -216,6 +220,11 @@ export default function NotesAdmin() {
           <Button size="sm" variant="soft" onClick={() => setConfirm({ action: 'archive', label: 'Archive' })}>
             Archive
           </Button>
+          {kind === 'note' && (
+            <Button size="sm" variant="soft" onClick={() => setConfirm({ action: 'standard', label: 'Apply' })}>
+              Set ₹99 · Premium
+            </Button>
+          )}
           <Button size="sm" variant="soft" icon={Trash2} onClick={() => setConfirm({ action: 'delete', label: 'Delete', danger: true })}>
             Delete
           </Button>
@@ -268,6 +277,7 @@ export default function NotesAdmin() {
         {confirm?.action === 'publish' && 'Published items become visible and purchasable straight away.'}
         {confirm?.action === 'unpublish' && 'They disappear from the store. People who already bought them keep their access.'}
         {confirm?.action === 'archive' && 'They are taken off sale. People who already bought them keep their access.'}
+        {confirm?.action === 'standard' && 'Sets the selling price to ₹99, the original price to ₹199, and includes them in the Premium plan. Notes already sold keep what buyers paid.'}
         {confirm?.action === 'delete' && 'This permanently removes the item and its files. Anything that has been ordered cannot be deleted; archive it instead.'}
       </Confirm>
     </>

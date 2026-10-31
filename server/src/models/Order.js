@@ -9,8 +9,20 @@ const orderSchema = new mongoose.Schema(
     // Snapshot so history stays correct if the product is later edited.
     productTitle: { type: String, required: true },
     productSlug: String,
-    productKind: { type: String, enum: ['note', 'bundle', 'plan'], required: true },
+    // 'cart' = several notes bought together; `product` then points at the first of them and `items` lists all.
+    productKind: { type: String, enum: ['note', 'bundle', 'plan', 'cart'], required: true },
     planDays: Number,
+    items: [
+      {
+        _id: false,
+        product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+        title: String,
+        slug: String,
+        listPaise: Number,
+      },
+    ],
+    // Part of discountPaise that came from buying several notes together (the rest is a coupon).
+    volumeDiscountPaise: { type: Number, default: 0, min: 0 },
     // Price before any coupon, the discount applied, and the amount actually charged (amountPaise).
     listAmountPaise: { type: Number, min: 0 },
     discountPaise: { type: Number, default: 0, min: 0 },
@@ -44,6 +56,8 @@ orderSchema.methods.toPublic = function toPublic() {
     amount: this.amountPaise / 100,
     listAmount: (this.listAmountPaise ?? this.amountPaise) / 100,
     discount: (this.discountPaise ?? 0) / 100,
+    volumeDiscount: (this.volumeDiscountPaise ?? 0) / 100,
+    ...(this.productKind === 'cart' ? { items: this.items.map((i) => ({ slug: i.slug, title: i.title, price: (i.listPaise ?? 0) / 100 })) } : {}),
     couponCode: this.couponCode,
     currency: this.currency,
     status: this.status,

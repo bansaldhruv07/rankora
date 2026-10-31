@@ -277,3 +277,124 @@ describe('premium vs standalone notes', () => {
     void Entitlement
   })
 })
+
+describe('cart', () => {
+  before(startDb)
+  after(stopDb)
+  beforeEach(resetDb)
+
+  const notes = (n, price = 100) => Promise.all(Array.from({ length: n }, (_, i) => makeProduct({ slug: `n${i + 1}`, price })))
+  const slugs = (n) => Array.from({ length: n }, (_, i) => `n${i + 1}`)
+  const quoteOf = async (agent, items, coupon) => (await agent.post('/api/cart/quote').send({ items, ...(coupon ? { coupon } : {}) })).body.data
+  const payCart = async (agent, items, coupon) => {
+    const created = await agent.post('/api/orders').send({ items, ...(coupon ? { coupon } : {}) })
+    if (created.status >= 300) return { created }
+    const orderId = created.body.data.order.id
+    const proof = (await agent.post('/api/payments/mock/complete').send({ orderId })).body.data
+    const verified = await agent.post('/api/payments/verify').send({ orderId, ...proof })
+    return { created, orderId, verified }
+  }
+
+  it('gives a bigger discount the more notes are bought together', async () => {
+    await notes(5)
+    const guest = client()
+    const totals = {}
+    for (const n of [1, 2, 3, 5]) totals[n] = await quoteOf(guest, slugs(n))
+    assert.equal(totals[1].total, 100, 'one note: no discount')
+    assert.equal(totals[1].nextTier.needed, 1)
+    assert.equal(totals[2].total, 180)
+    assert.equal(totals[2].volumePercent, 10)
+    assert.equal(totals[3].total, 255)
+    assert.equal(totals[5].total, 400)
+    assert.equal(totals[5].nextTier, null)
+    assert.equal(totals[3].volumeDiscount, 45)
+  })
+
+  it('applies a coupon on top of the volume discount', async () => {
+    await notes(2)
+    await Coupon.create({ code: 'EXTRA10', type: 'percent', value: 10 })
+    const q = await quoteOf(client(), slugs(2), 'EXTRA10')
+    assert.equal(q.volumeDiscount, 20)
+    assert.equal(q.couponDiscount, 18, '10% of the 180 left after the volume discount')
+    assert.equal(q.total, 162)
+  })
+
+  it('sells the cart as one order at the quoted price and gives access to every note', async () => {
+    await notes(3)
+    const { agent } = await registerUser()
+    const { created, verified } = await payCart(agent, slugs(3))
+    assert.equal(created.status, 201)
+    assert.equal(created.body.data.order.amount, 255)
+    assert.equal(created.body.data.order.kind, 'cart')
+    assert.equal(created.body.data.order.items.length, 3)
+    assert.equal(verified.status, 200)
+    for (const slug of slugs(3)) assert.equal((await openReader(agent, slug)).status, 201)
+    const lib = (await agent.get('/api/library')).body.data
+    assert.deepEqual(lib.items.map((i) => i.source), ['purchase', 'purchase', 'purchase'])
+    assert.equal((await openReader((await registerUser()).agent, 'n1')).status, 403, 'other students get nothing')
+    const order = await Order.findById(created.body.data.order.id)
+    assert.equal(order.volumeDiscountPaise, 4500)
+    assert.equal(order.listAmountPaise, 30000)
+  })
+
+  it('ignores prices sent by the client and refuses a mixed or empty request', async () => {
+    await notes(2)
+    const { agent } = await registerUser()
+    const created = await agent.post('/api/orders').send({ items: slugs(2), amount: 1, total: 1 })
+    assert.equal(created.body.data.order.amount, 180)
+    assert.equal((await agent.post('/api/orders').send({ items: slugs(2), product: 'n1' })).status, 400)
+    assert.equal((await agent.post('/api/orders').send({ items: [] })).status, 400)
+    assert.equal((await agent.post('/api/orders').send({})).status, 400)
+  })
+
+  it('leaves out notes the student already owns and sells a single leftover note normally', async () => {
+    await notes(3)
+    const { agent } = await registerUser()
+    await buy(agent, 'n1')
+    const q = await quoteOf(agent, slugs(3))
+    assert.deepEqual(q.owned, ['n1'])
+    assert.equal(q.count, 2)
+    assert.equal(q.total, 180)
+
+    await buy(agent, 'n2')
+    const single = await agent.post('/api/orders').send({ items: slugs(3) })
+    assert.equal(single.status, 201)
+    assert.equal(single.body.data.order.kind, 'note', 'one note left: priced as a normal order')
+    assert.equal(single.body.data.order.amount, 100)
+
+    await buy(agent, 'n3')
+    assert.equal((await agent.post('/api/orders').send({ items: slugs(3) })).status, 409)
+  })
+
+  it('treats free, unpublished and unknown notes as unavailable', async () => {
+    await notes(2)
+    await makeProduct({ slug: 'free-one', price: 0 })
+    await makeProduct({ slug: 'draft-one', status: 'draft' })
+    const q = await quoteOf(client(), ['n1', 'n2', 'free-one', 'draft-one', 'nope'])
+    assert.deepEqual(q.unavailable.sort(), ['draft-one', 'free-one', 'nope'])
+    assert.equal(q.count, 2)
+    const { agent } = await registerUser()
+    assert.equal((await agent.post('/api/orders').send({ items: ['free-one', 'nope'] })).status, 404)
+  })
+
+  it('reuses an identical open cart order on retry, and cancels it when the cart changes', async () => {
+    await notes(3)
+    const { agent } = await registerUser()
+    const first = await agent.post('/api/orders').send({ items: slugs(2) })
+    const again = await agent.post('/api/orders').send({ items: [...slugs(2)].reverse() })
+    assert.equal(again.body.data.order.id, first.body.data.order.id)
+    const changed = await agent.post('/api/orders').send({ items: slugs(3) })
+    assert.notEqual(changed.body.data.order.id, first.body.data.order.id)
+    assert.equal((await Order.findById(first.body.data.order.id)).status, 'cancelled')
+  })
+
+  it('removes access for every note in the cart when the order is refunded', async () => {
+    await notes(2)
+    const admin = await adminAgent()
+    const { agent } = await registerUser()
+    const { orderId } = await payCart(agent, slugs(2))
+    const refund = await admin.post(`/api/admin/orders/${orderId}/refund`).send({ reason: 'test' })
+    assert.ok(refund.status < 300, `refund failed ${refund.status}`)
+    for (const slug of slugs(2)) assert.equal((await openReader(agent, slug)).status, 403)
+  })
+})

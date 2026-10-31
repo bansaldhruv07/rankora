@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { ArrowRight, Menu, X } from 'lucide-react'
+import { ArrowRight, Menu, ShoppingBag, X } from 'lucide-react'
 import Logo from '../common/Logo'
 import ThemeToggle from './ThemeToggle'
 import Button from '../ui/Button'
 import { useAuth } from '../../hooks/useAuth'
+import { useCart } from '../../hooks/useCart'
 import { ROUTES } from '../../utils/routes'
 import { cn } from '../../utils/cn'
 
@@ -18,6 +19,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(() => window.scrollY > 8)
   const { user, openAuth } = useAuth()
+  const cart = useCart()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -77,6 +79,19 @@ export default function Navbar() {
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
+          <Link
+            to={ROUTES.cart}
+            onClick={close}
+            aria-label={cart.count ? `Cart, ${cart.count} ${cart.count === 1 ? 'note' : 'notes'}` : 'Cart'}
+            className="relative grid size-10 place-items-center rounded-full text-ink-900 transition hover:bg-ivory-200"
+          >
+            <ShoppingBag size={20} aria-hidden="true" />
+            {cart.count > 0 && (
+              <span aria-hidden="true" className="absolute right-0.5 top-0.5 grid min-w-4.5 place-items-center rounded-full bg-ember-500 px-1 text-[0.65rem] font-bold leading-[1.15rem] text-white">
+                {cart.count}
+              </span>
+            )}
+          </Link>
           {user ? (
             <>
               <Link

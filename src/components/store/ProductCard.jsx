@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Eye, FileText } from 'lucide-react'
 import { CLASS_LABELS, pluralize } from '../../utils/format'
 import { notePath } from '../../utils/routes'
+import AddToCartButton from '../cart/AddToCartButton'
 import { cn } from '../../utils/cn'
 import PriceTag from './PriceTag'
 import ProductCover from './ProductCover'
@@ -39,6 +40,12 @@ export default function ProductCard({ product, owned = false, className }) {
             <p className="text-sm font-semibold text-sage-700">In your library</p>
           ) : (
             <PriceTag product={product} />
+          )}
+          {!owned && product.kind === 'note' && product.price > 0 && (
+            // Sits above the card's full-size link so it can be clicked on its own.
+            <div className="relative z-10 mt-3">
+              <AddToCartButton slug={product.slug} size="sm" variant="soft" />
+            </div>
           )}
           {product.previewPageCount > 0 && !owned && (
             <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-ink-500">

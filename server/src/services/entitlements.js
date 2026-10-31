@@ -50,7 +50,7 @@ export async function accessSummary(userId) {
 // product id -> { source, orderId, since, bundleId? } for explicit purchases and bundle contents.
 export async function ownedMap(userId) {
   const rows = await Entitlement.find({ ...activeFilter(userId), scope: { $in: ['product', 'bundle'] } })
-    .select('scope product products order createdAt')
+    .select('scope product products order createdAt via')
     .lean()
   const owned = new Map()
   const put = (id, value) => {
@@ -59,6 +59,7 @@ export async function ownedMap(userId) {
   }
   for (const row of rows) {
     if (row.scope === 'product') put(row.product, { source: 'purchase', orderId: row.order, since: row.createdAt })
+    else if (row.via === 'cart') for (const id of row.products ?? []) put(id, { source: 'purchase', orderId: row.order, since: row.createdAt })
     else for (const id of row.products ?? []) put(id, { source: 'bundle', bundleId: row.product, orderId: row.order, since: row.createdAt })
   }
   return owned
@@ -73,6 +74,10 @@ export async function grantForOrder(order) {
   if (order.productKind === 'plan') {
     set.scope = 'all-paid'
     set.expiresAt = new Date(Date.now() + order.planDays * DAY)
+  } else if (order.productKind === 'cart') {
+    set.scope = 'bundle'
+    set.via = 'cart'
+    set.products = order.items.map((item) => item.product)
   } else if (order.productKind === 'bundle') {
     const bundle = await Product.findById(order.product).select('bundleItems').lean()
     set.scope = 'bundle'

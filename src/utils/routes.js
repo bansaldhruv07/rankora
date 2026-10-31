@@ -3,6 +3,7 @@ export const ROUTES = {
   notes: '/notes',
   pricing: '/pricing',
   library: '/library',
+  cart: '/cart',
   account: '/account',
   policies: '/policies',
 }

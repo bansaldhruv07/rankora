@@ -97,7 +97,9 @@ export default function NoteEditor() {
   const { data: product, error, loading, reload } = useApi(`/admin/products/${id}`)
   if (loading) return <div className="h-96 animate-pulse rounded-2xl bg-ivory-200" aria-busy="true" />
   if (error) return <ErrorNote error={error} onRetry={reload} />
-  return <Editor key={`${product.id}-${product.updatedAt}`} product={product} reload={reload} />
+  // Remount only when the note itself changes (another note, publish state, new PDF). Saving or changing the cover
+  // must not rebuild the form, or whatever has been typed but not saved would be lost.
+  return <Editor key={`${product.id}-${product.status}-${product.file?.version ?? 0}`} product={product} reload={reload} />
 }
 
 function Editor({ product, reload }) {
@@ -132,7 +134,8 @@ function Editor({ product, reload }) {
     if (Object.keys(errors).length) return toast({ title: 'Fix the highlighted fields', tone: 'info' })
     setSaving(true)
     try {
-      await api(`/admin/products/${product.id}`, { method: 'PATCH', body })
+      const { data: saved } = await api(`/admin/products/${product.id}`, { method: 'PATCH', body })
+      setForm(toForm(saved))
       toast({ title: 'Saved' })
       reload()
     } catch (err) {

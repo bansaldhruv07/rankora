@@ -6,6 +6,7 @@ import BundleCard from '../components/store/BundleCard'
 import PriceTag from '../components/store/PriceTag'
 import ProductCard from '../components/store/ProductCard'
 import ProductCover from '../components/store/ProductCover'
+import AddToCartButton from '../components/cart/AddToCartButton'
 import CheckoutModal from '../components/pricing/CheckoutModal'
 import { DifficultyBadge, SubjectBadge } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -180,9 +181,12 @@ function Detail({ product }) {
                           Read for free
                         </Button>
                       ) : (
-                        <Button variant="accent" size="lg" icon={Lock} onClick={buy}>
-                          Buy for {formatPrice(product.price)}
-                        </Button>
+                        <>
+                          <Button variant="accent" size="lg" icon={Lock} onClick={buy}>
+                            Buy now · {formatPrice(product.price)}
+                          </Button>
+                          {!isBundle && <AddToCartButton slug={product.slug} size="lg" />}
+                        </>
                       )}
                       {product.previewPageCount > 0 && (
                         <Button to={readPath(product.slug, { preview: true })} variant="outline" size="lg" icon={Eye}>
@@ -190,6 +194,11 @@ function Detail({ product }) {
                         </Button>
                       )}
                     </div>
+                    {!isBundle && !free && (
+                      <p className="mt-4 rounded-xl bg-sage-50 px-3.5 py-2.5 text-sm leading-relaxed text-sage-700">
+                        Buying more than one note? Add them to your cart and save 10% on 2, 15% on 3, 20% on 5 or more.
+                      </p>
+                    )}
                     {!user && !free && (
                       <p className="mt-4 text-sm text-ink-600">
                         You&apos;ll sign in or create an account at checkout.{' '}
@@ -344,9 +353,12 @@ function Detail({ product }) {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ivory-50/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
           <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
             <PriceTag product={product} />
-            <Button variant="accent" icon={Lock} onClick={buy}>
-              Buy now
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isBundle && <AddToCartButton slug={product.slug} variant="soft" label="Add" />}
+              <Button variant="accent" icon={Lock} onClick={buy}>
+                Buy now
+              </Button>
+            </div>
           </div>
         </div>
       )}

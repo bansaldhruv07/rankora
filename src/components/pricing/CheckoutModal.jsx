@@ -4,7 +4,7 @@ import Button from '../ui/Button'
 import Modal from '../ui/Modal'
 import { useAuth } from '../../hooks/useAuth'
 import { api } from '../../lib/api'
-import { loadRazorpay } from '../../lib/razorpay'
+import { payOrder } from '../../lib/checkout'
 import { formatPrice } from '../../utils/format'
 import { ROUTES, readPath } from '../../utils/routes'
 
@@ -54,13 +54,7 @@ export default function CheckoutModal({ open, onClose, slug, title, fallbackAmou
     setPhase('working')
     setError('')
     try {
-      const { order, checkout } = (await api('/orders', { method: 'POST', body: { product: slug, ...(quote.couponCode ? { coupon: quote.couponCode } : {}) } })).data
-      setSandbox(checkout.provider === 'mock')
-      const proof =
-        checkout.provider === 'mock'
-          ? (await api('/payments/mock/complete', { method: 'POST', body: { orderId: order.id } })).data
-          : await loadRazorpay().then((Razorpay) => openRazorpay(Razorpay, checkout, title))
-      await api('/payments/verify', { method: 'POST', body: { orderId: order.id, ...proof } })
+      await payOrder({ product: slug, ...(quote.couponCode ? { coupon: quote.couponCode } : {}) }, title, { onCheckout: (checkout) => setSandbox(checkout.provider === 'mock') })
       await refresh()
       setPhase('done')
       onPurchased?.()
@@ -219,26 +213,4 @@ export default function CheckoutModal({ open, onClose, slug, title, fallbackAmou
       </p>
     </Modal>
   )
-}
-
-function openRazorpay(Razorpay, checkout, title) {
-  return new Promise((resolve, reject) => {
-    const instance = new Razorpay({
-      key: checkout.key,
-      amount: checkout.amountPaise,
-      currency: checkout.currency,
-      order_id: checkout.providerOrderId,
-      name: 'Rankora',
-      description: title,
-      prefill: checkout.prefill,
-      theme: { color: '#c2571a' },
-      handler: (response) =>
-        resolve({ razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature }),
-      modal: { ondismiss: () => reject(Object.assign(new Error('Payment cancelled'), { code: 'DISMISSED' })) },
-    })
-    instance.on('payment.failed', (response) =>
-      reject(new Error(response.error?.description || 'Payment failed. You have not been charged.')),
-    )
-    instance.open()
-  })
 }

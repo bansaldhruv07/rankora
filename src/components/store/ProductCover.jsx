@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { assetUrl } from '../../lib/api'
 import { CLASS_LABELS } from '../../utils/format'
 import { cn } from '../../utils/cn'
@@ -51,9 +52,7 @@ export default function ProductCover({ product, className, compact = false }) {
   if (product.coverUrl) {
     return (
       // An uploaded cover is already a finished design: show it whole, in its own proportions, with nothing drawn over it.
-      <div className={cn('relative isolate min-h-24 w-full overflow-hidden rounded-[0.35rem] bg-ivory-200 shadow-lift', className)}>
-        <img src={assetUrl(product.coverUrl)} alt={`Cover of ${product.title}`} loading="lazy" decoding="async" className="block h-auto w-full" />
-      </div>
+      <UploadedCover product={product} className={className} />
     )
   }
 
@@ -89,6 +88,24 @@ export default function ProductCover({ product, className, compact = false }) {
         </p>
       </div>
       <Spine color={theme.spine} />
+    </div>
+  )
+}
+
+// The frame only reserves a portrait-shaped placeholder while the image loads; once it has, the frame is exactly the
+// image's own size, so there is never empty space around or below it.
+function UploadedCover({ product, className }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <div className={cn('relative isolate w-full overflow-hidden rounded-[0.35rem] bg-ivory-200 shadow-lift', !loaded && 'aspect-[3/4]', className)}>
+      <img
+        src={assetUrl(product.coverUrl)}
+        alt={`Cover of ${product.title}`}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        className="block h-auto w-full"
+      />
     </div>
   )
 }

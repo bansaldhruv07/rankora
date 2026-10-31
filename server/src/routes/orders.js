@@ -4,19 +4,25 @@ import { requireAuth } from '../middleware/auth.js'
 import { paymentLimiter } from '../middleware/security.js'
 import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
+import { loadCart } from '../services/cart.js'
 import { hasAccess } from '../services/entitlements.js'
 import { getProvider } from '../services/payments/index.js'
-import { PENDING_WINDOW_MS, quote } from '../services/pricing.js'
+import { PENDING_WINDOW_MS, quote, quoteCart } from '../services/pricing.js'
+import { cartItemsSchema } from './cart.js'
 import { badRequest, conflict, notFound } from '../utils/AppError.js'
 import { asyncHandler, assertObjectId, ok, pageMeta, pageParams, parse } from '../utils/http.js'
 
 const router = Router()
 router.use(requireAuth)
 
-const createSchema = z.object({
-  product: z.string().trim().regex(/^[a-z0-9-]{1,80}$/),
-  coupon: z.string().trim().max(30).optional(),
-})
+// One product by slug, or several notes bought together as a cart.
+const createSchema = z
+  .object({
+    product: z.string().trim().regex(/^[a-z0-9-]{1,80}$/).optional(),
+    items: cartItemsSchema.optional(),
+    coupon: z.string().trim().max(30).optional(),
+  })
+  .refine((body) => Boolean(body.product) !== Boolean(body.items), { message: 'Send either product or items' })
 
 const checkoutPayload = (order, user) => {
   const provider = getProvider()
@@ -41,20 +47,73 @@ async function assertNotOwned(userId, product) {
   }
 }
 
+// Several notes in one order. Priced here from the database, exactly as the cart quote shows.
+async function createCartOrder(req, res, products, couponInput) {
+  const couponCode = couponInput ? couponInput.toUpperCase() : undefined
+  const priced = await quoteCart({ products, couponCode, userId: req.user._id })
+  const ids = products.map((p) => p._id)
+  const window = { $gt: new Date(Date.now() - PENDING_WINDOW_MS) }
+
+  // Repeated clicks / retries reuse the identical open order instead of creating duplicates.
+  const existing = await Order.findOne({
+    user: req.user._id,
+    productKind: 'cart',
+    status: 'pending',
+    createdAt: window,
+    couponCode: priced.coupon?.code ?? null,
+    amountPaise: priced.totalPaise,
+    items: { $size: ids.length },
+    'items.product': { $all: ids },
+  })
+  if (existing) return ok(res, { order: existing.toPublic(), checkout: checkoutPayload(existing, req.user) })
+
+  await Order.updateMany({ user: req.user._id, productKind: 'cart', status: 'pending', createdAt: window }, { $set: { status: 'cancelled' } })
+  const order = await Order.create({
+    user: req.user._id,
+    product: products[0]._id,
+    productTitle: `${products[0].title} + ${products.length - 1} more`,
+    productKind: 'cart',
+    items: products.map((p) => ({ product: p._id, title: p.title, slug: p.slug, listPaise: p.pricePaise })),
+    listAmountPaise: priced.listPaise,
+    discountPaise: priced.discountPaise,
+    volumeDiscountPaise: priced.volumeDiscountPaise,
+    couponCode: priced.coupon?.code,
+    amountPaise: priced.totalPaise,
+    currency: products[0].currency,
+    provider: getProvider().name,
+  })
+  const remote = await getProvider().createOrder({ amountPaise: order.amountPaise, currency: order.currency, receipt: String(order._id) })
+  order.providerOrderId = remote.id
+  await order.save()
+  return ok(res, { order: order.toPublic(), checkout: checkoutPayload(order, req.user) }, undefined, 201)
+}
+
 // The price always comes from the database (and a validated coupon), never from the request.
 router.post(
   '/',
   paymentLimiter,
   asyncHandler(async (req, res) => {
-    const { product: slug, coupon: couponInput } = parse(createSchema, req.body)
+    const { product: slugInput, items, coupon: couponInput } = parse(createSchema, req.body)
     getProvider() // throws 503 when payments are not enabled, before anything is created
+
+    let slug = slugInput
+    if (items) {
+      // Notes the student already has are left out. A cart that ends up with one note is an ordinary single-note order.
+      const cart = await loadCart(items, req.user._id)
+      if (cart.products.length === 0) {
+        throw cart.owned.length ? conflict('You already have access to everything in this cart') : notFound('These notes are not available')
+      }
+      if (cart.products.length > 1) return createCartOrder(req, res, cart.products, couponInput)
+      slug = cart.products[0].slug
+    }
+
     const product = await Product.findOne({ slug, status: 'published' })
     if (!product) throw notFound('Product not found')
     if (product.pricePaise <= 0) throw badRequest('This product is free and cannot be purchased')
     await assertNotOwned(req.user._id, product)
 
     const couponCode = couponInput ? couponInput.toUpperCase() : undefined
-    const open = { user: req.user._id, product: product._id, status: 'pending', createdAt: { $gt: new Date(Date.now() - PENDING_WINDOW_MS) } }
+    const open = { user: req.user._id, product: product._id, productKind: product.kind, status: 'pending', createdAt: { $gt: new Date(Date.now() - PENDING_WINDOW_MS) } }
 
     // Repeated clicks / retries reuse the identical open order instead of creating duplicates.
     const existing = await Order.findOne({ ...open, listAmountPaise: product.pricePaise, couponCode: couponCode ?? null })

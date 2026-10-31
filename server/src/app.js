@@ -11,6 +11,7 @@ import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { apiLimiter, requireCustomHeader } from './middleware/security.js'
 import adminRoutes from './routes/admin/index.js'
 import authRoutes from './routes/auth.js'
+import cartRoutes from './routes/cart.js'
 import libraryRoutes from './routes/library.js'
 import orderRoutes from './routes/orders.js'
 import paymentRoutes from './routes/payments.js'
@@ -95,6 +96,7 @@ export function createApp() {
   app.use('/api/admin', adminRoutes)
   app.use('/api/auth', authRoutes)
   app.use('/api/products', productRoutes)
+  app.use('/api/cart', cartRoutes)
   app.use('/api/orders', orderRoutes)
   app.use('/api/payments', paymentRoutes)
   app.use('/api/library', libraryRoutes)
