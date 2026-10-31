@@ -10,8 +10,8 @@ export default function Benefits() {
           <SectionHeading
             align="center"
             eyebrow="Why Rankora"
-            title="Everything you need to revise, and nothing you do not"
-            description="Built around the weekly rhythm of JEE Main preparation: revise, practise, test, review."
+            title="Notes you will actually open the night before"
+            description="Made for the part of preparation that decides marks: quick, confident revision."
           />
         </Reveal>
         <div className="mt-14 grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
@@ -19,7 +19,7 @@ export default function Benefits() {
             const Icon = benefit.icon
             return (
               <Reveal key={benefit.id} delay={(index % 3) * 90} className="group">
-                <span className="grid size-12 place-items-center rounded-xl border border-line bg-[#fffdf8] text-ink-800 shadow-soft transition duration-300 group-hover:-translate-y-0.5 group-hover:border-ember-500 group-hover:text-ember-600">
+                <span className="grid size-12 place-items-center rounded-xl border border-line bg-surface text-ink-800 shadow-soft transition duration-300 group-hover:-translate-y-0.5 group-hover:border-ember-500 group-hover:text-ember-600">
                   <Icon size={22} aria-hidden="true" />
                 </span>
                 <h3 className="mt-5 text-xl font-semibold">{benefit.title}</h3>

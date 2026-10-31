@@ -27,7 +27,19 @@ export const env = {
   paymentProvider: process.env.PAYMENT_PROVIDER || '',
   mockPaymentSecret: process.env.MOCK_PAYMENT_SECRET || 'rankora-mock-secret-not-for-production',
   storageDir: process.env.PRIVATE_STORAGE_DIR || fileURLToPath(new URL('../../storage/private', import.meta.url)),
-  downloadHourlyLimit: int(process.env.DOWNLOAD_HOURLY_LIMIT, 20),
+  adminSessionHours: int(process.env.ADMIN_SESSION_HOURS, 8),
+  maxPdfBytes: int(process.env.MAX_PDF_MB, 60) * 1024 * 1024,
+  maxCoverBytes: int(process.env.MAX_COVER_MB, 2) * 1024 * 1024,
+  reader: {
+    idleMinutes: int(process.env.READER_SESSION_MINUTES, 30),
+    maxHours: int(process.env.READER_MAX_SESSION_HOURS, 12),
+    maxActiveSessions: int(process.env.READER_MAX_ACTIVE_SESSIONS, 3),
+    hourlyOpenLimit: int(process.env.READER_HOURLY_OPEN_LIMIT, 30),
+    derivedTtlHours: int(process.env.DERIVED_TTL_HOURS, 6),
+  },
+  smtpUrl: process.env.SMTP_URL || '',
+  mailFrom: process.env.MAIL_FROM || 'Rankora <no-reply@localhost>',
+  supportEmail: process.env.SUPPORT_EMAIL || '',
 }
 
 if (!env.paymentProvider) {

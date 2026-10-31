@@ -27,13 +27,13 @@ export default function ComparisonTable() {
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-136 text-left text-sm">
-          <caption className="sr-only">Free and Premium plan comparison</caption>
+          <caption className="sr-only">Pay per note and Premium comparison</caption>
           <thead className="border-b border-line bg-ivory-100">
             <tr>
               <th scope="col" className="px-5 py-4 font-mono text-[0.7rem] font-medium uppercase tracking-[0.14em] text-ink-500">
                 Feature
               </th>
-              <th scope="col" className="px-5 py-4 font-display text-lg font-semibold">Free</th>
+              <th scope="col" className="px-5 py-4 font-display text-lg font-semibold">Pay per note</th>
               <th scope="col" className="px-5 py-4 font-display text-lg font-semibold text-ember-600">Premium</th>
             </tr>
           </thead>

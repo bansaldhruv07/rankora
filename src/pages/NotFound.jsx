@@ -8,7 +8,7 @@ export default function NotFound() {
         Error 404
       </p>
       <h1 className="animate-rise stagger mt-5 text-5xl font-semibold sm:text-6xl" style={{ '--d': '80ms' }}>
-        This page is not in the syllabus
+        We could not find that page
       </h1>
       <p
         className="animate-rise stagger mx-auto mt-5 max-w-lg text-lg leading-relaxed text-ink-600"
@@ -20,8 +20,8 @@ export default function NotFound() {
         <Button to={ROUTES.home} variant="accent" size="lg">
           Go to home
         </Button>
-        <Button to={ROUTES.explore} variant="outline" size="lg">
-          Browse resources
+        <Button to={ROUTES.notes} variant="outline" size="lg">
+          Browse notes
         </Button>
       </div>
     </section>

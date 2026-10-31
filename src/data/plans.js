@@ -1,44 +1,44 @@
 export const PLANS = [
   {
     id: 'free',
-    name: 'Free',
-    blurb: 'Start with the essentials and see how Rankora works.',
+    name: 'Pay per note',
+    blurb: 'Try a free sample, then buy only the chapters you need. No subscription.',
     price: { monthly: 0, yearly: 0 },
-    cta: 'Start free',
+    cta: 'Browse the notes',
     highlights: [
-      'Free notes and formula sheets',
-      'One full mixed mock test',
-      'Practice questions with solutions',
-      'Analytics for your own attempts',
-      'Bookmarks saved in your browser',
+      'Free sample pages on notes that offer them',
+      'Buy any single note, once, and keep it',
+      'Bundles that cost less than buying notes one by one',
+      'Read on phone or laptop in the Rankora reader',
+      'Your last-read page is saved to your account',
     ],
   },
   {
     id: 'premium',
     name: 'Premium',
-    blurb: 'The complete set for steady, chapter-by-chapter preparation.',
+    blurb: 'One payment for every note that is included in Premium, for the period you choose.',
     price: { monthly: 399, yearly: 2999 },
     cta: 'Get Premium',
     highlights: [
-      'Everything in Free',
-      'All chapter-wise PYQ sets with reviewed solutions',
-      'All sectional and full mock tests',
-      'Weak-topic ranking and revision plan',
-      'Mistake notebook with review status',
+      'Everything in Pay per note',
+      'Read every note that is included in Premium',
+      'Newly added included notes unlock automatically',
+      'One payment, no auto-renewal',
+      'Notes outside Premium stay available to buy separately',
     ],
   },
 ]
 
 // `true` / `false` render as a tick / dash; strings render as text.
 export const COMPARISON = [
-  { feature: 'Short revision notes', free: 'Selected chapters', premium: 'All chapters' },
-  { feature: 'Formula sheets', free: 'Selected sheets', premium: 'All sheets' },
-  { feature: 'Chapter-wise PYQ practice', free: 'Sample questions', premium: 'All sets' },
-  { feature: 'Reviewed solutions', free: true, premium: true },
-  { feature: 'Mock tests', free: '1 full mock', premium: 'All full and sectional mocks' },
-  { feature: 'Analytics dashboard', free: true, premium: true },
-  { feature: 'Weak-topic revision plan', free: false, premium: true },
-  { feature: 'Mistake notebook', free: false, premium: true },
+  { feature: 'Free sample pages', free: true, premium: true },
+  { feature: 'Notes included in Premium', free: 'Buy each note once', premium: 'All of them, while active' },
+  { feature: 'New notes added later', free: 'Buy when released', premium: 'Included ones unlock automatically' },
+  { feature: 'Notes not included in Premium', free: 'Buy each note once', premium: 'Buy each note once' },
+  { feature: 'Bundles', free: 'Buy a bundle once', premium: 'Buy a bundle once' },
+  { feature: 'Reader with saved progress', free: true, premium: true },
+  { feature: 'Read on phone and laptop', free: true, premium: true },
+  { feature: 'Access after you pay', free: 'Keep it', premium: 'For the period you chose' },
 ]
 
 export const CHECKOUT_NOTE =

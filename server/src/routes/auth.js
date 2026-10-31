@@ -4,9 +4,13 @@ import { z } from 'zod'
 import { env } from '../config/env.js'
 import { clearSession, issueSession, requireAuth } from '../middleware/auth.js'
 import { authLimiter } from '../middleware/security.js'
+import { PasswordReset } from '../models/PasswordReset.js'
 import { User } from '../models/User.js'
 import { accessSummary } from '../services/entitlements.js'
-import { AppError, conflict, unauthorized } from '../utils/AppError.js'
+import { sendMail } from '../services/mailer.js'
+import { revokeUserSessions } from '../services/viewerSessions.js'
+import { AppError, conflict, forbidden, unauthorized } from '../utils/AppError.js'
+import { randomToken, sha256Hex } from '../utils/crypto.js'
 import { asyncHandler, ok, parse } from '../utils/http.js'
 
 const router = Router()
@@ -43,6 +47,7 @@ router.post(
     const user = await User.findOne({ email }).select('+passwordHash +tokenVersion')
     const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH)
     if (!user || !valid) throw unauthorized('Invalid email or password')
+    if (user.suspendedAt) throw forbidden('This account has been suspended. Please contact support.')
     user.lastLoginAt = new Date()
     await user.save()
     issueSession(res, user)
@@ -61,6 +66,58 @@ router.post(
     }
     clearSession(res)
     ok(res, { loggedOut: true })
+  }),
+)
+
+const RESET_MINUTES = 30
+
+// Always answers the same way, so it cannot be used to discover which emails have accounts.
+router.post(
+  '/forgot-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const { email: address } = parse(z.object({ email }), req.body)
+    const user = await User.findOne({ email: address })
+    if (user && !user.suspendedAt) {
+      await PasswordReset.deleteMany({ user: user._id, usedAt: null })
+      const token = randomToken(32)
+      await PasswordReset.create({ user: user._id, tokenHash: sha256Hex(token), expiresAt: new Date(Date.now() + RESET_MINUTES * 60000) })
+      const link = `${env.frontendOrigin}/reset-password?token=${token}`
+      await sendMail({
+        to: user.email,
+        subject: 'Reset your Rankora password',
+        text: `Hi ${user.name},
+
+Use this link to choose a new password. It works once and expires in ${RESET_MINUTES} minutes:
+
+${link}
+
+If you did not ask for this, you can ignore this email; your password has not changed.
+`,
+      }).catch(() => {})
+    }
+    ok(res, { sent: true })
+  }),
+)
+
+router.post(
+  '/reset-password',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const { token, password: newPassword } = parse(z.object({ token: z.string().min(20).max(100), password }), req.body)
+    // One atomic claim: a token can be used exactly once even under concurrent requests.
+    const claim = await PasswordReset.findOneAndUpdate(
+      { tokenHash: sha256Hex(token), usedAt: null, expiresAt: { $gt: new Date() } },
+      { $set: { usedAt: new Date() } },
+    )
+    if (!claim) throw new AppError(400, 'BAD_REQUEST', 'This reset link is invalid or has expired. Request a new one.')
+    const user = await User.findById(claim.user).select('+tokenVersion')
+    if (!user) throw new AppError(400, 'BAD_REQUEST', 'This reset link is invalid or has expired. Request a new one.')
+    user.passwordHash = await bcrypt.hash(newPassword, env.bcryptRounds)
+    user.tokenVersion += 1
+    await user.save()
+    await revokeUserSessions(user._id, 'password reset')
+    ok(res, { reset: true })
   }),
 )
 

@@ -11,7 +11,7 @@ export default function FaqSection() {
           <SectionHeading
             eyebrow="FAQ"
             title="Questions, answered plainly"
-            description="What Rankora is, what it is not, and where your data lives."
+            description="Who writes the notes, how you read them, and how buying works."
           />
         </Reveal>
         <Reveal delay={100}>

@@ -1,26 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { ArrowRight, Bookmark, Menu, X } from 'lucide-react'
+import { ArrowRight, Menu, X } from 'lucide-react'
 import Logo from '../common/Logo'
+import ThemeToggle from './ThemeToggle'
 import Button from '../ui/Button'
 import { useAuth } from '../../hooks/useAuth'
-import { useBookmarks } from '../../hooks/useBookmarks'
-import { DIAGNOSTIC_PATH, ROUTES, explorePath } from '../../utils/routes'
+import { ROUTES } from '../../utils/routes'
 import { cn } from '../../utils/cn'
 
 const LINKS = [
   { to: ROUTES.home, label: 'Home', end: true },
-  { to: ROUTES.explore, label: 'Explore' },
-  { to: ROUTES.practice, label: 'Practice' },
-  { to: ROUTES.mocks, label: 'Mock tests' },
-  { to: ROUTES.analytics, label: 'Analytics' },
+  { to: ROUTES.notes, label: 'Notes' },
   { to: ROUTES.pricing, label: 'Pricing' },
 ]
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(() => window.scrollY > 8)
-  const { count } = useBookmarks()
   const { user, openAuth } = useAuth()
 
   useEffect(() => {
@@ -48,7 +44,7 @@ export default function Navbar() {
       )}
     >
       <div className="page-container flex h-16 items-center justify-between gap-4 sm:h-[4.5rem]">
-        <Logo onClick={close} />
+        <Logo onClick={close} tagline />
 
         <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
           {LINKS.map((link) => (
@@ -80,30 +76,24 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <Link
-            to={explorePath({ saved: '1' })}
-            onClick={close}
-            aria-label={`Saved resources, ${count} saved`}
-            className="relative grid size-10 place-items-center rounded-full text-ink-700 transition hover:bg-ivory-200 hover:text-ink-950"
-          >
-            <Bookmark size={20} aria-hidden="true" />
-            {count > 0 && (
-              <span
-                aria-hidden="true"
-                className="tabular absolute -right-0.5 -top-0.5 grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-ember-500 px-1 text-[0.65rem] font-semibold text-white"
-              >
-                {count}
-              </span>
-            )}
-          </Link>
+          <ThemeToggle />
           {user ? (
-            <Link
-              to={ROUTES.account}
-              onClick={close}
-              className="hidden h-10 items-center rounded-full px-3.5 text-sm font-semibold text-ink-800 transition hover:bg-ivory-200 sm:inline-flex"
-            >
-              Account
-            </Link>
+            <>
+              <Link
+                to={ROUTES.library}
+                onClick={close}
+                className="hidden h-10 items-center rounded-full px-3.5 text-sm font-semibold text-ink-800 transition hover:bg-ivory-200 sm:inline-flex"
+              >
+                Library
+              </Link>
+              <Link
+                to={ROUTES.account}
+                onClick={close}
+                className="hidden h-10 items-center rounded-full px-3.5 text-sm font-semibold text-ink-800 transition hover:bg-ivory-200 sm:inline-flex"
+              >
+                Account
+              </Link>
+            </>
           ) : (
             <button
               type="button"
@@ -114,8 +104,8 @@ export default function Navbar() {
             </button>
           )}
           <div className="hidden sm:block">
-            <Button to={DIAGNOSTIC_PATH} size="sm" variant="accent" iconRight={ArrowRight}>
-              Take diagnostic
+            <Button to={ROUTES.notes} size="sm" variant="accent" iconRight={ArrowRight}>
+              Browse notes
             </Button>
           </div>
           <button
@@ -152,14 +142,24 @@ export default function Navbar() {
               </NavLink>
             ))}
             {user ? (
-              <NavLink
-                to={ROUTES.account}
-                onClick={close}
-                className="flex items-center justify-between border-b border-line-soft py-3.5 font-display text-xl font-medium text-ink-900"
-              >
-                Account
-                <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
-              </NavLink>
+              <>
+                <NavLink
+                  to={ROUTES.library}
+                  onClick={close}
+                  className="flex items-center justify-between border-b border-line-soft py-3.5 font-display text-xl font-medium text-ink-900"
+                >
+                  My library
+                  <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
+                </NavLink>
+                <NavLink
+                  to={ROUTES.account}
+                  onClick={close}
+                  className="flex items-center justify-between border-b border-line-soft py-3.5 font-display text-xl font-medium text-ink-900"
+                >
+                  Account
+                  <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
+                </NavLink>
+              </>
             ) : (
               <button
                 type="button"
@@ -173,8 +173,8 @@ export default function Navbar() {
                 <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
               </button>
             )}
-            <Button to={DIAGNOSTIC_PATH} onClick={close} variant="accent" size="lg" className="mt-5" iconRight={ArrowRight}>
-              Take the diagnostic test
+            <Button to={ROUTES.notes} onClick={close} variant="accent" size="lg" className="mt-5" iconRight={ArrowRight}>
+              Browse all notes
             </Button>
           </nav>
         </div>

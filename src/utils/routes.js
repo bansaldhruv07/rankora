@@ -1,14 +1,11 @@
 export const ROUTES = {
   home: '/',
-  explore: '/explore',
-  practice: '/practice',
-  mocks: '/mock-tests',
-  analytics: '/analytics',
+  notes: '/notes',
   pricing: '/pricing',
+  library: '/library',
   account: '/account',
+  policies: '/policies',
 }
-
-export const DIAGNOSTIC_PATH = '/practice?mode=diagnostic'
 
 function withQuery(base, params = {}) {
   const query = new URLSearchParams()
@@ -19,7 +16,7 @@ function withQuery(base, params = {}) {
   return text ? `${base}?${text}` : base
 }
 
-export const resourcePath = (id) => `/resource/${id}`
-export const explorePath = (params) => withQuery(ROUTES.explore, params)
-export const practicePath = (params) => withQuery(ROUTES.practice, params)
-export const mockPath = (testId) => withQuery(ROUTES.mocks, { test: testId })
+export const notePath = (slug) => `/notes/${slug}`
+export const notesPath = (params) => withQuery(ROUTES.notes, params)
+// Reader for a purchased note, or the free sample extract with { preview: true }.
+export const readPath = (slug, { preview = false } = {}) => `/read/${slug}${preview ? '?preview=1' : ''}`

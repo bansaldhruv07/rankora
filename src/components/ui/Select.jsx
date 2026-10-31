@@ -11,7 +11,7 @@ export default function Select({ label, value, onChange, options, className }) {
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 w-full appearance-none rounded-xl border border-line bg-[#fffdf8] pl-4 pr-10 text-sm font-medium text-ink-900 shadow-soft transition hover:border-ink-900/30 focus:border-ember-500 focus:outline-none focus:ring-4 focus:ring-ember-500/15"
+          className="h-11 w-full appearance-none rounded-xl border border-line bg-surface pl-4 pr-10 text-sm font-medium text-ink-900 shadow-soft transition hover:border-ink-900/30 focus:border-ember-500 focus:outline-none focus:ring-4 focus:ring-ember-500/15"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>

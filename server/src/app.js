@@ -6,12 +6,14 @@ import mongoose from 'mongoose'
 import { env } from './config/env.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { apiLimiter, requireCustomHeader } from './middleware/security.js'
-import adminRoutes from './routes/admin.js'
+import adminRoutes from './routes/admin/index.js'
 import authRoutes from './routes/auth.js'
 import libraryRoutes from './routes/library.js'
 import orderRoutes from './routes/orders.js'
 import paymentRoutes from './routes/payments.js'
 import productRoutes from './routes/products.js'
+import readerRoutes from './routes/reader.js'
+import supportRoutes from './routes/support.js'
 import webhookRoutes from './routes/webhooks.js'
 import { logger } from './utils/logger.js'
 
@@ -21,7 +23,16 @@ export function createApp() {
   if (env.trustProxy) app.set('trust proxy', 1)
 
   app.use(helmet())
-  app.use(cors({ origin: env.frontendOrigin, credentials: true, methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'X-Requested-With'] }))
+  app.use(
+    cors({
+      origin: env.frontendOrigin,
+      credentials: true,
+      methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'X-Requested-With', 'X-Reader-Token', 'X-Filename', 'Range'],
+      // PDF.js needs these to do ranged loading when the API is on another origin.
+      exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'],
+    }),
+  )
 
   if (!env.isTest) {
     app.use((req, res, next) => {
@@ -38,6 +49,10 @@ export function createApp() {
     res.json({ success: true, data: { status: 'ok', db: mongoose.connection.readyState === 1 } })
   })
 
+  // The reader streams a PDF as many small range requests, so it sits ahead of the general limiter
+  // and has its own (see middleware/security.js). Per-session byte caps bound abuse instead.
+  app.use('/api/reader', cookieParser(), requireCustomHeader, express.json({ limit: '10kb' }), readerRoutes)
+
   app.use('/api', apiLimiter, cookieParser(), requireCustomHeader)
   app.use('/api', express.json({ limit: '100kb' }))
   app.use('/api/admin', adminRoutes)
@@ -46,6 +61,7 @@ export function createApp() {
   app.use('/api/orders', orderRoutes)
   app.use('/api/payments', paymentRoutes)
   app.use('/api/library', libraryRoutes)
+  app.use('/api/support', supportRoutes)
 
   app.use(notFoundHandler)
   app.use(errorHandler)

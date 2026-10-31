@@ -3,48 +3,48 @@ export const FAQ = [
     id: 'what',
     question: 'What is Rankora?',
     answer:
-      'Rankora is a JEE Main preparation workspace built around short revision notes, formula sheets, chapter-wise practice, mock tests and analytics, so you can revise a chapter, test it and see what to fix next.',
+      'Rankora sells concise, chapter-wise JEE notes written by IIT Delhi and DTU students. You buy a note, a bundle, or a Premium subscription, then read the notes inside the Rankora reader on your phone or laptop.',
   },
   {
-    id: 'pyq',
-    question: 'Are the questions real past-paper questions?',
+    id: 'who',
+    question: 'Who writes the notes?',
     answer:
-      'In this demo, the practice and mock questions are original samples written in JEE Main pattern. A live product would tag previous-year questions by year and shift. Nothing here is copied from a past paper.',
+      'Students from IIT Delhi and DTU who have been through JEE themselves. The notes are written the way a good student actually revises: short, formula-first, with the traps and shortcuts marked.',
   },
   {
-    id: 'solutions',
-    question: 'What do the solutions look like?',
+    id: 'try',
+    question: 'Can I look before I buy?',
     answer:
-      'Each solution walks through the method: the first step, the shortcut where one exists, and the trap that costs marks. You see it after you submit, not while you answer.',
+      'Yes. Notes that offer a free sample let you read the first pages in the same reader you will use after buying, with no sign-in. Each note page also lists exactly what is inside and which chapters it covers.',
   },
   {
-    id: 'marking',
-    question: 'How are mock tests scored?',
+    id: 'which',
+    question: 'Should I buy single notes, a bundle or Premium?',
     answer:
-      'Single-correct questions follow the JEE Main marking scheme: +4 for a correct answer, −1 for an incorrect one and 0 for an unattempted question.',
+      'Single notes suit a chapter you are weak in. A bundle costs less than buying its notes one by one, which suits a whole topic. Premium suits you if you want to read every note that is included in it for a period of time.',
   },
   {
-    id: 'ai',
-    question: 'Does Rankora use AI?',
+    id: 'read',
+    question: 'How do I read the notes?',
     answer:
-      'No. Analytics are plain calculations on the tests you take: accuracy, time, weak chapters and mistakes. There is no AI tutor or generated content in this demo.',
+      'In your browser, in the Rankora reader, with zoom and page jump. It remembers your last page, so you can continue on another device. There is no file to download or manage.',
   },
   {
-    id: 'data',
-    question: 'Where is my data stored?',
+    id: 'download',
+    question: 'Why can I not download the PDF?',
     answer:
-      'In your browser, on this device. Bookmarks and attempts use local storage. There is no account, server or database, so clearing site data resets everything.',
+      'The notes are the work of their authors, and unlimited copies would make it unfair to everyone who paid. Every page carries your name as a watermark, which discourages sharing and keeps the notes available for new students.',
   },
   {
     id: 'pay',
-    question: 'Can I actually pay for Premium?',
+    question: 'How does payment work?',
     answer:
-      'Yes. Sign in, pick a plan and pay through Razorpay (UPI, cards and netbanking). Access is unlocked only after the payment is verified on our server. Card and UPI details never touch Rankora.',
+      'Sign in, choose what you want and pay through Razorpay (UPI, cards and netbanking). Access starts the moment the payment is verified on our server. Card and UPI details never touch Rankora.',
   },
   {
-    id: 'advanced',
-    question: 'Does it cover JEE Advanced?',
+    id: 'refund',
+    question: 'What if something goes wrong with my order?',
     answer:
-      'Rankora is built for JEE Main. Many concepts overlap, but the pattern, marking and depth of questions here follow the Main paper.',
+      'Write to us from Account → Support with your order reference. The Policies page explains how payments, access and refunds work.',
   },
 ]

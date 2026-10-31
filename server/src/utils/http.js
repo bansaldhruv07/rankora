@@ -33,6 +33,25 @@ export function pageParams(query, { defaultLimit = 20, maxLimit = 50 } = {}) {
   return { page, limit, skip: (page - 1) * limit }
 }
 
-export const pageMeta = (page, limit, total) => ({ page, limit, total, pages: Math.ceil(total / limit) || 1 })
+// Parses a single-range `Range: bytes=...` header. Returns null (no header), 'invalid', or { start, end } (inclusive).
+export function parseRange(header, size) {
+  if (!header) return null
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim())
+  if (!match || (match[1] === '' && match[2] === '')) return 'invalid'
+  let start
+  let end
+  if (match[1] === '') {
+    const suffix = Number.parseInt(match[2], 10)
+    if (!suffix) return 'invalid'
+    start = Math.max(0, size - suffix)
+    end = size - 1
+  } else {
+    start = Number.parseInt(match[1], 10)
+    end = match[2] === '' ? size - 1 : Math.min(Number.parseInt(match[2], 10), size - 1)
+  }
+  return start >= size || start > end ? 'invalid' : { start, end }
+}
+
+export const pageMeta =(page, limit, total) => ({ page, limit, total, pages: Math.ceil(total / limit) || 1 })
 
 export { ZodError }

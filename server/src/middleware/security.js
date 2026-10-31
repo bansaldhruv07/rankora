@@ -13,6 +13,12 @@ const limiter = (windowMs, max, code) =>
 
 export const apiLimiter = limiter(15 * 60 * 1000, env.rateLimitMax, 'RATE_LIMITED')
 export const authLimiter = limiter(15 * 60 * 1000, env.authRateLimitMax, 'AUTH_RATE_LIMITED')
+export const adminAuthLimiter = limiter(15 * 60 * 1000, Math.max(5, Math.floor(env.authRateLimitMax / 2)), 'AUTH_RATE_LIMITED')
+export const readerSessionLimiter = limiter(15 * 60 * 1000, Math.max(60, env.rateLimitMax / 5), 'RATE_LIMITED')
+// A page of PDF.js range requests is many small fetches, so streaming has its own, higher ceiling.
+// Abuse is bounded per session by bytes served instead (see routes/reader.js).
+export const readerStreamLimiter = limiter(15 * 60 * 1000, env.rateLimitMax * 13, 'RATE_LIMITED')
+export const publicWriteLimiter = limiter(60 * 60 * 1000, Math.max(20, env.rateLimitMax / 15), 'RATE_LIMITED')
 export const paymentLimiter = limiter(15 * 60 * 1000, Math.max(30, env.rateLimitMax / 5), 'PAYMENT_RATE_LIMITED')
 
 // Cookie auth + SameSite=None needs CSRF protection: browsers cannot attach a custom header

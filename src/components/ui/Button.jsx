@@ -3,7 +3,7 @@ import { cn } from '../../utils/cn'
 
 const VARIANTS = {
   primary: 'bg-ink-900 text-ivory-50 shadow-press hover:bg-ink-800 hover:shadow-lift',
-  accent: 'bg-ember-500 text-white shadow-press hover:bg-ember-600 hover:shadow-lift',
+  accent: 'sheen bg-ember-500 text-white shadow-press hover:brightness-110 hover:shadow-lift',
   outline: 'border border-ink-900/25 text-ink-900 hover:border-ink-900 hover:bg-ivory-100',
   soft: 'bg-ivory-200 text-ink-900 hover:bg-ivory-300',
   ghost: 'text-ink-800 hover:bg-ivory-200',

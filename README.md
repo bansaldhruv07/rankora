@@ -1,16 +1,27 @@
-# React + Vite
+# Rankora
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+JEE notes site: a **notes marketplace** where students buy chapter notes (singly, in bundles, or with Premium) written by IIT Delhi students and read them in a secure in-site PDF reader. React 19 + Vite + Tailwind 4 frontend; Express + MongoDB API in [server/](server/README.md).
 
-Currently, two official plugins are available:
+```
+src/
+  pages/            Notes (store), NoteDetails, Library, Reader, Account, Policies, ResetPassword, admin/*
+  components/store  ProductCover (generated covers), ProductCard, BundleCard, PriceTag
+  components/reader PdfViewer (PDF.js), WatermarkLayer, ReaderScreen (session lifecycle)
+  components/admin  shared admin UI, UploadPanel
+  lib/              api (fetch + upload progress), pdf (PDF.js loader), reader
+server/             API, models, tests: see server/README.md
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick start
 
-## React Compiler
+```powershell
+cd server; npm install; Copy-Item .env.example .env   # fill in JWT_SECRET, MONGODB_URI
+npm run dev:db        # local MongoDB (or use Atlas)
+npm run create-admin  # your admin account
+npm run dev           # API :5000
+cd ..; npm install; npm run dev   # site :5173, admin at /admin
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Everything about uploading and publishing notes, the PDF protection model, endpoints, environment variables and deployment is in [server/README.md](server/README.md).
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Scripts: `npm run dev`, `npm run build` (also copies PDF.js assets to `public/pdfjs`), `npm run lint`. Needs Node 22.13+ to build (pdfjs-dist 6).

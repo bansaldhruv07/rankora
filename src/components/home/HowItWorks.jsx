@@ -9,8 +9,8 @@ export default function HowItWorks() {
         <Reveal>
           <SectionHeading
             eyebrow="How it works"
-            title="A short loop you can repeat every week"
-            description="Diagnose, revise, practise, test. Each step feeds the next."
+            title="From search to reading in a few minutes"
+            description="No downloads, no waiting for a link. Try a sample, buy, and start."
           />
         </Reveal>
         <ol className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

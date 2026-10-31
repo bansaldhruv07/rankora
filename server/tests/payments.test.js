@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, before, beforeEach, describe, it } from 'node:test'
-import { adminAgent, buy, client, makeProduct, registerUser, resetDb, sign, startDb, stopDb, webhook } from './helpers.js'
+import { adminAgent, buy, client, makeProduct, openReader, registerUser, resetDb, sign, startDb, stopDb, webhook } from './helpers.js'
 
 const capturedEvent = (order, amount, paymentId = 'pay_wh_1') => ({
   event: 'payment.captured',
@@ -48,7 +48,7 @@ describe('orders, payments and webhooks', () => {
     // Signature made for a different order must not work either.
     const wrongOrderSig = sign('order_other|pay_fake')
     assert.equal((await agent.post('/api/payments/verify').send({ orderId: String(order._id), razorpay_payment_id: 'pay_fake', razorpay_signature: wrongOrderSig })).status, 400)
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 403)
+    assert.equal((await openReader(agent, 'paid-note')).status, 403)
     assert.equal((await agent.get(`/api/orders/${order._id}`)).body.data.status, 'pending')
   })
 
@@ -97,7 +97,7 @@ describe('orders, payments and webhooks', () => {
     const event = capturedEvent(order, 9900)
     assert.equal((await webhook(event, { secret: 'wrong-secret' })).status, 400)
     assert.equal((await webhook(event, { signature: '' })).status, 400)
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 403)
+    assert.equal((await openReader(agent, 'paid-note')).status, 403)
   })
 
   it('processes a signed webhook once and treats a duplicate event id as a no-op', async () => {
@@ -116,7 +116,7 @@ describe('orders, payments and webhooks', () => {
     const { Entitlement } = await import('../src/models/Entitlement.js')
     assert.equal(await Payment.countDocuments(), 1)
     assert.equal(await Entitlement.countDocuments(), 1)
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 200)
+    assert.equal((await openReader(agent, 'paid-note')).status, 201)
   })
 
   it('does not grant access when the webhook amount differs from the order', async () => {
@@ -124,7 +124,7 @@ describe('orders, payments and webhooks', () => {
     const { agent } = await registerUser()
     const { order } = await createOrder(agent, 'paid-note')
     assert.equal((await webhook(capturedEvent(order, 100))).status, 200)
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 403)
+    assert.equal((await openReader(agent, 'paid-note')).status, 403)
     assert.equal((await agent.get(`/api/orders/${order._id}`)).body.data.status, 'pending')
   })
 
@@ -142,14 +142,14 @@ describe('orders, payments and webhooks', () => {
     await makeProduct({ slug: 'paid-note', price: 99 })
     const { agent } = await registerUser()
     const { orderId, payment } = await buy(agent, 'paid-note')
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 200)
+    assert.equal((await openReader(agent, 'paid-note')).status, 201)
 
-    assert.equal((await agent.post(`/api/admin/orders/${orderId}/refund`).send({})).status, 403)
+    assert.equal((await agent.post(`/api/admin/orders/${orderId}/refund`).send({})).status, 401)
     const admin = await adminAgent()
     const refunded = await admin.post(`/api/admin/orders/${orderId}/refund`).send({ reason: 'requested by student' })
     assert.equal(refunded.status, 200)
     assert.equal(refunded.body.data.status, 'refunded')
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 403)
+    assert.equal((await openReader(agent, 'paid-note')).status, 403)
     assert.equal((await admin.post(`/api/admin/orders/${orderId}/refund`).send({})).status, 409)
 
     const { Payment } = await import('../src/models/Payment.js')
@@ -166,9 +166,9 @@ describe('orders, payments and webhooks', () => {
     const { payment } = await buy(agent, 'paid-note')
     const refundOf = (id, amount) => ({ event: 'refund.processed', payload: { refund: { entity: { id, payment_id: payment.razorpay_payment_id, amount } } } })
     await webhook(refundOf('rfnd_a', 4000))
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 200)
+    assert.equal((await openReader(agent, 'paid-note')).status, 201)
     await webhook(refundOf('rfnd_b', 6000))
-    assert.equal((await agent.get('/api/library/paid-note/file')).status, 403)
+    assert.equal((await openReader(agent, 'paid-note')).status, 403)
   })
 
   it('exposes payment health and rejects unknown routes safely', async () => {

@@ -50,27 +50,59 @@ export async function registerUser(agent = client(), overrides = {}) {
   return { agent, user: res.body.data.user, body }
 }
 
-export async function adminAgent() {
-  const { agent, user } = await registerUser()
-  await User.updateOne({ _id: user.id }, { role: 'admin' })
+// Registers an account, promotes it directly in the database (as the create-admin script does) and
+// signs in through the separate admin endpoint.
+export async function staffAgent(role = 'admin') {
+  const { agent, user, body } = await registerUser()
+  await User.updateOne({ _id: user.id }, { role })
+  const login = await agent.post('/api/admin/auth/login').send({ email: body.email, password: body.password })
+  if (login.status !== 200) throw new Error(`admin login failed: ${login.status} ${JSON.stringify(login.body)}`)
   return agent
 }
+export const adminAgent = () => staffAgent('admin')
 
-async function pdfBuffer(text) {
+async function pdfBuffer(text, pages = 1) {
   const pdf = await PDFDocument.create()
-  pdf.addPage([300, 300]).drawText(text)
+  for (let i = 0; i < pages; i += 1) pdf.addPage([300, 300]).drawText(`${text} p${i + 1}`)
   return Buffer.from(await pdf.save())
 }
 
-export async function makeProduct({ slug, price = 99, kind = 'note', status = 'published', withFile = true, ...rest } = {}) {
-  const doc = { slug, title: `Product ${slug}`, kind, type: kind === 'plan' ? 'plan' : 'notes', pricePaise: price * 100, status, ...(kind === 'plan' ? { planDays: 30 } : {}), ...rest }
+export async function makeProduct({ slug, price = 99, kind = 'note', status = 'published', withFile = true, pages = 3, ...rest } = {}) {
+  const doc = {
+    slug,
+    title: `Product ${slug}`,
+    kind,
+    type: kind === 'plan' ? 'plan' : kind === 'bundle' ? 'bundle' : 'notes',
+    pricePaise: price * 100,
+    status,
+    ...(kind === 'plan' ? { planDays: 30 } : {}),
+    ...rest,
+  }
   if (withFile && kind === 'note') {
     const key = `notes/${slug}.pdf`
-    const buffer = await pdfBuffer(`secret ${slug}`)
+    const buffer = await pdfBuffer(`secret ${slug}`, pages)
     await putObject(key, buffer)
-    doc.file = { key, originalName: `${slug}.pdf`, size: buffer.length, uploadedAt: new Date() }
+    doc.file = { key, originalName: `${slug}.pdf`, size: buffer.length, pages, version: 1, uploadedAt: new Date() }
   }
   return Product.create(doc)
+}
+
+export async function samplePdf(pages = 3) {
+  return pdfBuffer('uploaded', pages)
+}
+
+// Opens a reader session through the real endpoint. Returns the full response.
+export const openReader = (agent, slug, mode = 'full') => agent.post('/api/reader/sessions').send({ product: slug, mode })
+
+// Reads from the stream endpoint (optionally a byte range) and returns the raw bytes.
+export const stream = (agent, token, range) => {
+  let req = agent.get('/api/reader/stream').set('X-Reader-Token', token)
+  if (range) req = req.set('Range', range)
+  return req.buffer(true).parse((r, cb) => {
+    const chunks = []
+    r.on('data', (c) => chunks.push(c))
+    r.on('end', () => cb(null, Buffer.concat(chunks)))
+  })
 }
 
 export const sign = (payload, secret = MOCK_SECRET) => crypto.createHmac('sha256', secret).update(payload).digest('hex')

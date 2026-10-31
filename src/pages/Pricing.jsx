@@ -25,8 +25,8 @@ export default function Pricing() {
     <>
       <PageHeader
         eyebrow="Pricing"
-        title="Start free. Upgrade for the full set."
-        description="Free gives you real notes, practice and a full mock. Premium unlocks every chapter set, formula sheet and mock test."
+        title="Pay per note, or read everything in Premium"
+        description="Buy a single note or a bundle and keep it, or take Premium to read every note that is included in it for the period you choose."
       >
         <div className="flex gap-2" role="group" aria-label="Billing period">
           <Chip active={billing === 'monthly'} onClick={() => setBilling('monthly')}>
@@ -47,8 +47,8 @@ export default function Pricing() {
         <Reveal>
           <SectionHeading
             eyebrow="Compare"
-            title="What is in each plan"
-            description="Everything in Free stays free. Premium adds the complete set."
+            title="Pay per note or Premium"
+            description="Both use the same reader. The difference is how you get access."
           />
         </Reveal>
         <Reveal delay={100} className="mt-8">

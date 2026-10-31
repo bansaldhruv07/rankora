@@ -65,7 +65,7 @@ export default function Modal({ open, onClose, title, description, children, foo
       <div
         aria-hidden="true"
         onClick={() => closeRef.current?.()}
-        className="absolute inset-0 animate-fade bg-ink-950/50"
+        className="absolute inset-0 animate-fade bg-black/60"
       />
       <div
         ref={panelRef}
@@ -75,7 +75,7 @@ export default function Modal({ open, onClose, title, description, children, foo
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         className={cn(
-          'relative max-h-[90vh] w-full animate-pop overflow-y-auto rounded-t-3xl border border-line bg-[#fffdf8] p-6 shadow-lift sm:rounded-3xl sm:p-8',
+          'relative max-h-[90vh] w-full animate-pop overflow-y-auto rounded-t-3xl border border-line bg-surface p-6 shadow-lift sm:rounded-3xl sm:p-8',
           SIZES[size],
         )}
       >

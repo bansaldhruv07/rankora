@@ -1,136 +1,127 @@
 # Rankora API
 
-Express + MongoDB (Mongoose) backend for the Rankora frontend. Handles accounts, the notes catalogue, Razorpay payments, purchase entitlements and watermarked delivery of private PDFs.
+Express 5 + MongoDB (Mongoose) backend. It runs the notes catalogue and admin CMS, accounts, Razorpay payments, purchase entitlements, and the secure PDF reader (short-lived sessions, personalised watermarking, range streaming).
 
 ## Layout
 
 ```
 server/
   src/
-    config/env.js        environment loading + startup validation
-    models/              User, Product, Order, Payment, Entitlement, AccessLog, WebhookEvent
-    middleware/          auth (cookie JWT), security (rate limits, CSRF header), error handler
-    routes/              auth, products, orders, payments, webhooks, library, admin
-    services/            payments/ (razorpay, mock), settlement, entitlements, storage, watermark, accessLog
-    utils/               AppError, http helpers (validation, pagination), redacting logger
-    app.js, server.js
-  scripts/seed.js        loads the catalogue from the frontend data + placeholder PDFs + first admin
-  scripts/dev-db.js      local MongoDB for machines without one
-  tests/                 node:test + supertest + in-memory MongoDB
+    config/env.js         environment loading + startup validation
+    models/               User, Product (note | bundle | plan), Order, Payment, Entitlement, Coupon,
+                          ViewerSession, ReadingProgress, AccessLog, AuditLog, PasswordReset,
+                          SupportMessage, WebhookEvent
+    middleware/           auth (student cookie + separate admin cookie + RBAC), security (limits, CSRF header), error
+    routes/               auth, products, orders, payments, webhooks, library, reader, support
+    routes/admin/         auth, products (CMS + uploads), coupons, orders, users, support, insights (stats, logs)
+    services/             storage, pdf (validation), watermark, documents (derived-copy cache), reader,
+                          viewerSessions, entitlements, pricing (coupons), settlement, payments/, audit, mailer
+  scripts/create-admin.js first admin / editor (prompts for a hidden password)
+  scripts/setup-plans.js  creates the Premium plan products the Pricing page sells (safe in production)
+  tests/                  node:test + supertest + in-memory MongoDB (96 tests)
 ```
 
-## Windows PowerShell: install, run, test
+## Run it locally (Windows PowerShell)
 
 ```powershell
 cd C:\Users\hp\Documents\Projects\rankora\server
 npm install
 Copy-Item .env.example .env
-# edit .env: set JWT_SECRET (>= 32 chars) and optionally ADMIN_EMAIL / ADMIN_PASSWORD
+# edit .env: JWT_SECRET (32+ random chars) and, if you use Atlas, MONGODB_URI
 
-# Terminal 1: MongoDB. Skip this if you have MongoDB installed or use an Atlas URI in .env.
-npm run dev:db
+npm run dev:db          # terminal 1: local MongoDB (skip if you use Atlas or have MongoDB installed)
+npm run create-admin    # terminal 2: creates your admin; asks for email, name and a hidden password (12+ chars)
+npm run setup-plans     # once per database: creates the Premium plan products used by /pricing
+npm run dev             # API on :5000
 
-# Terminal 2: seed once, then run the API on :5000
-npm run seed
-npm run dev
-
-# Terminal 3: frontend on :5173 (proxies /api to :5000)
-cd ..
-npm install
-npm run dev
-
-# Tests (no MongoDB install needed; downloads a test mongod binary on first run)
-cd server
-npm test
+cd ..; npm install; npm run dev     # terminal 3: frontend on :5173, proxies /api to :5000
+npm test                # in server/: no MongoDB install needed
 ```
 
-Generate a JWT secret:
-`node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`
+Generate a secret: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`
+
+There is no demo catalogue: every note on the site is one you upload in the admin area. Run `npm run setup-plans` once on each database (local and production) so the Premium plan can be bought.
+
+## First admin account (secure)
+
+There is no sign-up path to admin and roles are never read from a request. Run `npm run create-admin` on the server (or any machine that can reach the database). Use `--role editor` for a content-only account. Sign in at **/admin** on the website. Admin uses its own cookie (`rk_admin`, scoped to `/api/admin`, 8 h by default) and its own login endpoint; a student session cannot act as admin. Use a dedicated admin email: signing out of Studio ends every session of that account.
+
+## Upload and publish your Physics PDFs
+
+1. `/admin` → **Notes & bundles** → **Upload PDFs**. Optionally pick subject, class and a default price, then select all ten files at once. Each uploads with its own progress bar and becomes a **draft**. Title and page count are read from the PDF (the file name is the fallback).
+2. Open each draft (**Edit details**): set title, class, chapter, tags, short and detailed description, original and selling price, "what you receive", "who should buy", chapters covered, sample pages (e.g. `1-3`), optional cover image, display priority. **Preview in reader** shows exactly what a student will see.
+3. **Publish**. It needs a PDF, a subject and a class. Select many rows to publish, unpublish or archive in bulk.
+4. Bundles: **Bundles** tab → **New bundle** → pick notes → set a price (the saving against buying separately is computed for you) → publish once its notes are published.
+5. Offers: **Offers** → code, percent or flat discount, limits, expiry.
+
+Admin-created notes are **not** included in the Premium plan unless you tick *Include in Premium plan* (the Premium plan otherwise unlocks every eligible note).
 
 ## Environment variables
 
-See [.env.example](.env.example). Required: `MONGODB_URI`, `FRONTEND_ORIGIN`, `JWT_SECRET`. For real payments: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`. With no Razorpay keys the server uses the `mock` provider (refused when `NODE_ENV=production`). The frontend needs only the optional `VITE_API_URL` (see the root `.env.example`).
+See [.env.example](.env.example). Required: `MONGODB_URI`, `FRONTEND_ORIGIN`, `JWT_SECRET`. Real payments: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (no keys = `mock` provider, refused in production). Password-reset email: `SMTP_URL`, `MAIL_FROM`. Reader tuning: `READER_*`, `DERIVED_TTL_HOURS`. Uploads: `MAX_PDF_MB`, `MAX_COVER_MB`. **Never commit `server/.env`.**
 
 ## Response format
 
 ```
-success: { "success": true, "data": ..., "meta": { "page", "limit", "total", "pages" } }   // meta on lists
-error:   { "success": false, "error": { "code": "BAD_REQUEST", "message": "...", "details": [{ "field", "message" }] } }
+success: { "success": true, "data": ..., "meta": { "page", "limit", "total", "pages" } }
+error:   { "success": false, "error": { "code", "message", "details": [{ "field", "message" }] } }
 ```
-Status codes: 200/201 ok, 400 validation, 401 unauthenticated, 403 forbidden (or missing CSRF header), 404 missing (also for other users' orders), 409 conflict (already owned, wrong state), 429 rate limited, 502 gateway error, 503 database unavailable.
-Pagination: `?page=1&limit=20` (max 50, admin 100).
-
-State-changing requests (non-GET) must send `X-Requested-With: rankora` (CSRF defence, the frontend client does this).
+401 unauthenticated, 403 forbidden / missing CSRF header, 404 missing (also for other people's records), 409 conflict, 413 too large, 429 rate limited. Non-GET requests must send `X-Requested-With: rankora`.
 
 ## Endpoints
 
+**Public / student**
+
 | Method & path | Auth | Purpose |
 |---|---|---|
-| POST `/api/auth/register` | - | `{name,email,password}`, creates a student, sets cookie |
-| POST `/api/auth/login` | - | `{email,password}` |
-| POST `/api/auth/logout` | - | clears cookie and revokes the token |
-| GET `/api/auth/me` | user | profile + `access: {premium, premiumUntil, productSlugs}` |
-| PATCH `/api/auth/me` | user | `{name}` |
-| POST `/api/auth/change-password` | user | revokes other sessions |
-| GET `/api/products` | - | published products. Filters: `subject, chapter, type, price=free\|paid, q, kind=note\|plan` |
-| GET `/api/products/catalog` | - | subject > chapter > topic tree |
-| GET `/api/products/:slug` | - | product + free preview (no file info) |
-| POST `/api/orders` | user | `{product: slug}`; price is read from the DB; returns order + checkout payload |
-| GET `/api/orders`, `/api/orders/:id` | user | own orders only |
-| POST `/api/orders/:id/cancel` | user | pending orders only |
-| POST `/api/payments/verify` | user | `{orderId, razorpay_payment_id, razorpay_signature}` |
-| POST `/api/payments/mock/complete` | user | sandbox only: simulates the gateway popup |
-| POST `/api/webhooks/razorpay` | signature | `payment.captured`, `order.paid`, `payment.failed`, `refund.processed` |
-| GET `/api/library` | user | purchased / Premium-unlocked notes |
-| GET `/api/library/:slug/file` | user + entitlement | per-user watermarked PDF stream |
-| GET/POST/PATCH `/api/admin/products` | admin | list (incl. drafts), create (always draft), edit (allow-listed fields) |
-| POST `/api/admin/products/:id/publish` or `/unpublish` | admin | publishing a note requires an uploaded PDF |
-| PUT `/api/admin/products/:id/file` | admin | raw body, `Content-Type: application/pdf`, max 25 MB, `%PDF-` checked |
-| GET `/api/admin/orders`, `/orders/:id` | admin | filter `status`, `email` |
-| POST `/api/admin/orders/:id/refund` | admin | full refund: gateway refund, order `refunded`, entitlement revoked |
-| GET `/api/admin/access-logs` | admin | filter `action=denied\|download\|rate_limited\|suspicious` |
+| POST `/api/auth/register`, `/login`, `/logout` | - | accounts (role is always `student`) |
+| POST `/api/auth/forgot-password`, `/reset-password` | - | emailed single-use link (30 min) |
+| GET/PATCH `/api/auth/me`, POST `/api/auth/change-password` | user | profile, password |
+| GET `/api/products` | - | `subject, class, chapter, type, tag, q, price, kind=note\|bundle\|plan\|any, sort, page, limit` |
+| GET `/api/products/catalog`, `/:slug`, `/:slug/cover` | - | navigation tree; detail with bundles + related; cover image |
+| POST `/api/products/:slug/quote` | - | price breakdown with a coupon |
+| POST `/api/orders` | user | `{product, coupon?}`; priced on the server |
+| GET `/api/orders`, `/orders/:id`; POST `/orders/:id/cancel` | user | own orders only |
+| POST `/api/payments/verify` | user | Razorpay signature verified on the server |
+| POST `/api/webhooks/razorpay` | signature | idempotent settlement and refunds |
+| GET `/api/library` | user | owned notes with progress, source, order reference |
+| POST `/api/reader/sessions` | optional | `{product, mode: full\|preview}` opens a reading session |
+| GET `/api/reader/stream` | `X-Reader-Token` (+ login for `full`) | HTTP range stream of the derived PDF |
+| PUT `/api/reader/progress`, DELETE `/api/reader/sessions/current` | token | last-read page; close |
+| GET/POST `/api/support` | user | contact support |
 
-## Data model
+**Admin** (`/api/admin`, staff cookie + permission): `auth/login|logout|me`; `products` (list/filter/sort, create, `upload`, patch, `:id/file`, `:id/cover`, publish, unpublish, archive, delete, `preview-session`); `coupons`; `orders` (+ refund); `users` (+ revoke-sessions, suspend, unsuspend); `support`; `stats`; `access-logs`; `audit-logs`; `viewer-sessions`.
 
-- **User**: name, unique email, bcrypt `passwordHash` (never selected), role `student|admin`, `tokenVersion` (session revocation).
-- **Product**: unique `slug` (equals the frontend resource id), `kind` note|plan, subject/chapter/topic, type, `pricePaise`, `status` draft|published, preview (`sample`, `contents`, `includes`), private `file` reference (never serialised), `planDays` for plans. `type` and `kind` leave room for PYQ and mock products later.
-- **Order**: user, product snapshot, `amountPaise`, status `pending|paid|failed|cancelled|refunded`, unique `providerOrderId`.
-- **Payment**: unique `providerPaymentId`, amounts, refund totals/ids. No card or UPI data.
-- **Entitlement**: one per paid order (unique), scope `product` or `all-paid` (Premium, with `expiresAt`), status `active|revoked`.
-- **AccessLog**, **WebhookEvent** (unique `eventId` for idempotency).
+Permissions: **admin** has everything; **editor** has `content` and `support` only.
 
-## Payment and access rules
+## How the PDF protection works
 
-1. The server prices every order from the database. Client amounts are ignored.
-2. Access is granted only after `HMAC_SHA256(keySecret, providerOrderId|paymentId)` matches (verify endpoint, using the provider order id stored on our order) or after a webhook whose raw-body signature matches. A webhook amount that differs from the order grants nothing.
-3. Verify and webhook share one idempotent settlement routine, so retries, duplicate event ids and verify-vs-webhook races create one payment and one entitlement.
-4. Refunds: a full refund revokes that order's entitlement. A partial refund (gateway-initiated) keeps access until the refunded total reaches the paid amount. Premium access also ends at `expiresAt`.
-5. Files are stored outside any public path. Every download re-checks the entitlement, stamps the buyer's email/id on each page, logs the access, and is limited to `DOWNLOAD_HOURLY_LIMIT` per hour per user. More than 4 distinct IPs in an hour is logged as `suspicious`.
+- Originals live in private storage (`PRIVATE_STORAGE_DIR`), under server-generated keys. They are never served and no storage path is ever returned to a client.
+- Opening a note creates a **reader session**: the server checks login and entitlement (purchase, bundle, Premium for eligible notes, or free), logs it, builds a **personalised copy** (tiled diagonal name/masked-email/student-ID/order watermark on every page plus footer, generated from the account, cached briefly) and returns an opaque token (only its hash is stored). The original is never modified.
+- The PDF.js viewer streams that copy with range requests. Every request re-checks the token **and** the signed-in owner **and** the entitlement, so a refund, suspension, sign-out or password reset stops reading immediately. A token alone is useless.
+- Sessions expire when idle (`READER_SESSION_MINUTES`), have an absolute limit, and a student can hold `READER_MAX_ACTIVE_SESSIONS` at once (the oldest closes). Per-hour open limits, multi-IP / many-documents detection, and a per-session transfer cap feed the access log. Admins can close sessions or suspend accounts.
+- Free sample = a separate generated file containing **only the pages you mark free** (stamped SAMPLE). The locked pages are never in the file the browser receives, so they cannot be recovered client-side. The viewer is told the note's full page count, shows it in the page counter, and ends the sample with a single "Unlock the full notes" panel.
+- The on-screen layer adds a per-session-varied tiled watermark and a page footer. Right-click, drag, save and print shortcuts are blocked and printing is disabled.
 
-Watermarking deters casual sharing and makes leaks traceable. It cannot prevent screenshots, photos or retyping.
+This deters sharing and makes leaks traceable. **It cannot stop screenshots, phone photos or screen recording.**
 
-## Verify the full purchase flow (sandbox)
+## Payments
 
-Mock provider (no keys needed): sign in on the site, open a paid resource such as `/resource/phy-mechanics-formulas`, click **Buy**, then **Pay**. The sandbox payment is verified server-side, the Account page lists the note, and **Download PDF** returns a PDF stamped with your email.
+Prices are computed on the server (coupons included). Access is granted only after the HMAC signature is verified (verify endpoint) or a signed webhook arrives; both share one idempotent routine, so retries and races create one payment and one entitlement. Amount mismatches grant nothing. Refunds revoke access (bundle refunds only remove the bundle grant).
 
-Razorpay test mode:
-1. In the Razorpay dashboard (Test Mode) create an API key and put `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` in `.env`.
-2. Expose the API (for example `ngrok http 5000`), add a webhook to `https://<tunnel>/api/webhooks/razorpay` with events `payment.captured`, `order.paid`, `payment.failed`, `refund.processed`, and set the same secret as `RAZORPAY_WEBHOOK_SECRET`.
-3. Restart the API, buy with a Razorpay test card/UPI, then check the order is `paid` in **Account**.
-4. Refund as admin: sign in with the seeded admin, then `POST /api/admin/orders/:id/refund`. The note disappears from the buyer's library.
+Razorpay test mode: add test keys to `.env`, expose the API (e.g. `ngrok http 5000`), add a webhook to `https://<tunnel>/api/webhooks/razorpay` for `payment.captured`, `order.paid`, `payment.failed`, `refund.processed`, and put the same secret in `RAZORPAY_WEBHOOK_SECRET`.
 
 ## Deployment
 
-- **MongoDB**: create a MongoDB Atlas cluster, add a database user, allow your host's IPs, set `MONGODB_URI`. Run `npm run seed` once (with `ALLOW_PROD_SEED=true`) or create products through the admin API.
-- **API**: any Node 20+ host (Render, Railway, Fly, a VPS). Set `NODE_ENV=production`, `TRUST_PROXY=true`, `FRONTEND_ORIGIN=https://your-site`, `JWT_SECRET`, Razorpay live keys, `COOKIE_SAMESITE=none` if the frontend and API are on different sites (use the same parent domain and `lax` if possible). HTTPS is required.
-- **Private storage**: the default is local disk (`PRIVATE_STORAGE_DIR`), which needs a persistent volume. On ephemeral hosts, implement the three functions in `src/services/storage.js` against S3/R2 with server-side credentials (the rest of the code is unchanged). Never serve this directory.
-- **Frontend**: set `VITE_API_URL=https://api.example.com/api`, run `npm run build`, deploy `dist/`. Configure the Razorpay webhook to the production URL.
+- **MongoDB**: Atlas cluster, database user, allow your host's IPs, set `MONGODB_URI`. **Rotate** any credential that was ever committed (an earlier `server/.env.example` contained a real-looking Atlas password and JWT secret).
+- **API**: any Node 20+ host (Render, Railway, Fly, a VPS). `NODE_ENV=production`, `TRUST_PROXY=true`, `FRONTEND_ORIGIN=https://your-site`, `JWT_SECRET`, live Razorpay keys, `SMTP_URL`. HTTPS is required. Cross-site frontend/API needs `COOKIE_SAMESITE=none`; same parent domain with `lax` is simpler.
+- **Private storage**: the default is local disk and needs a **persistent volume** (`PRIVATE_STORAGE_DIR`). On ephemeral hosts implement `src/services/storage.js` (`putObject, getObject, deleteObject, statObject, readStream, sweepPrefix`) against S3/R2 with server-side credentials; nothing else changes.
+- **Frontend**: build with Node 22.13+ (pdfjs-dist 6 requires it). Set `VITE_API_URL=https://api.example.com/api`, `npm run build`, deploy `dist/`. `npm run build` copies PDF.js fonts/WASM into `public/pdfjs` (self-hosted). Add security headers on the static host (`X-Content-Type-Options: nosniff`, `Referrer-Policy`, `frame-ancestors 'none'`, and a CSP allowing `https://checkout.razorpay.com` and your API origin).
 
 ## Known limitations
 
-- Password reset is not implemented (needs an email provider). Add a one-time, hashed, expiring token plus email delivery.
-- Logout revokes the token for all devices (it bumps `tokenVersion`).
-- The local-disk storage provider is the only one implemented; S3/R2 is a documented swap point. Files are proxied through the API so they can be watermarked, so there are no signed URLs.
-- Refunds from the admin API are full refunds only; partial refunds are honoured when initiated from the Razorpay dashboard.
-- The catalogue pages (Explore, Home) still read the static data in the frontend. Only the resource page price, checkout, account and Premium state use the API. Keep seeded prices and `src/data/resources.js` in sync, or move Explore to `GET /api/products`.
-- PYQs, mock-test attempts, bookmarks, coupons and referrals are not built. The models leave room (`Product.type`, `kind`, per-product entitlements).
+- No admin two-factor sign-in. Use a long unique password; staff accounts are created only via the script.
+- Local-disk storage only (S3/R2 is a documented swap point). Per-student copies are cached on disk for `DERIVED_TTL_HOURS`.
+- Refunds from the admin screen are full refunds; partial refunds issued in the Razorpay dashboard are honoured.
+- Coupon usage limits can be exceeded by a few redemptions under heavy simultaneous checkout.
+- Page-view counts are de-duplicated in server memory (per instance); conversion is therefore approximate.
