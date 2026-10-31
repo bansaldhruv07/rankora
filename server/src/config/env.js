@@ -42,8 +42,10 @@ export const env = {
   supportEmail: process.env.SUPPORT_EMAIL || '',
 }
 
+// With no keys: local development uses the sandbox ('mock'); production never does, it simply does not take
+// payments yet ('disabled') until the Razorpay keys are added.
 if (!env.paymentProvider) {
-  env.paymentProvider = env.razorpay.keyId && env.razorpay.keySecret ? 'razorpay' : 'mock'
+  env.paymentProvider = env.razorpay.keyId && env.razorpay.keySecret ? 'razorpay' : isProd ? 'disabled' : 'mock'
 }
 
 export function assertEnv() {

@@ -1,0 +1,44 @@
+# Render blueprint for the Rankora API. In the Render dashboard: New > Blueprint > pick this repository.
+# Values marked `sync: false` are asked for once during setup and are never stored in git.
+services:
+  - type: web
+    name: rankora-api
+    runtime: node
+    rootDir: server
+    plan: starter # uploaded PDFs live on a persistent disk, which Render only offers on paid plans
+    buildCommand: npm ci
+    startCommand: node src/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: rankora-files
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      # Private PDF storage. This must be on the persistent disk above and must never be served publicly.
+      - key: PRIVATE_STORAGE_DIR
+        value: /var/data/private
+      - key: JWT_SECRET
+        generateValue: true
+      # Your MongoDB Atlas connection string (mongodb+srv://user:password@cluster.../rankora).
+      - key: MONGODB_URI
+        sync: false
+      # The exact address of the website, e.g. https://www.yourdomain.com (no trailing slash).
+      - key: FRONTEND_ORIGIN
+        sync: false
+      # "lax" when the site and API share a parent domain (www.example.com + api.example.com), which also
+      # works in Safari. "none" only if they are on unrelated domains (some browsers block that).
+      - key: COOKIE_SAMESITE
+        value: lax
+      # Payments stay closed until Razorpay is set up. To open them, add the three RAZORPAY_* values
+      # below and change this to razorpay (or delete it).
+      - key: PAYMENT_PROVIDER
+        value: disabled
+      - key: SUPPORT_EMAIL
+        sync: false

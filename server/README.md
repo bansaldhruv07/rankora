@@ -118,6 +118,28 @@ Razorpay test mode: add test keys to `.env`, expose the API (e.g. `ngrok http 50
 - **Private storage**: the default is local disk and needs a **persistent volume** (`PRIVATE_STORAGE_DIR`). On ephemeral hosts implement `src/services/storage.js` (`putObject, getObject, deleteObject, statObject, readStream, sweepPrefix`) against S3/R2 with server-side credentials; nothing else changes.
 - **Frontend**: build with Node 22.13+ (pdfjs-dist 6 requires it). Set `VITE_API_URL=https://api.example.com/api`, `npm run build`, deploy `dist/`. `npm run build` copies PDF.js fonts/WASM into `public/pdfjs` (self-hosted). Add security headers on the static host (`X-Content-Type-Options: nosniff`, `Referrer-Policy`, `frame-ancestors 'none'`, and a CSP allowing `https://checkout.razorpay.com` and your API origin).
 
+### Deploy on Render, step by step
+
+The repository includes a blueprint, [../render.yaml](../render.yaml), so most of this is clicking through Render's form.
+
+1. **MongoDB Atlas.** In your cluster: Database Access, create a user with a **new** strong password (rotate the old one). Network Access, allow `0.0.0.0/0` (Render's outgoing addresses change; the password is what protects the database). Copy the connection string and add a database name: `mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/rankora`.
+2. **Push the code** to GitHub (`git push`). Render deploys from the repository.
+3. **Render dashboard**: New, then Blueprint, then choose the repository. When asked, paste `MONGODB_URI`, `FRONTEND_ORIGIN` (your website address, for example `https://www.yourdomain.com`) and `SUPPORT_EMAIL`. `JWT_SECRET` is generated for you. The 5 GB disk and the Starter plan are in the blueprint.
+4. **Check it is up**: open `https://<your-service>.onrender.com/api/health`. It should say `"status":"ok","db":true`.
+5. **Create your admin** from your own computer (PowerShell), pointing at the production database. The password is typed hidden, never put in a file:
+   ```powershell
+   cd C:\Users\hp\Documents\Projects\rankora\server
+   $env:MONGODB_URI = "mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/rankora"
+   npm run create-admin
+   npm run setup-plans
+   Remove-Item Env:MONGODB_URI
+   ```
+6. **Point the website at the API**: build the frontend with `VITE_API_URL=https://<api address>/api` and deploy it. Use a custom domain for the API on the same parent domain as the website (for example `api.yourdomain.com` and `www.yourdomain.com`). Without that, Safari and some other browsers block the login cookie. If you must use unrelated domains, set `COOKIE_SAMESITE=none`.
+7. **Sign in at `/admin`**, upload your notes, publish.
+8. **When you get Razorpay**: add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` in Render, delete `PAYMENT_PROVIDER` (or set it to `razorpay`), create a webhook in Razorpay pointing at `https://<api address>/api/webhooks/razorpay` for `payment.captured`, `order.paid`, `payment.failed` and `refund.processed`, and redeploy.
+
+Until step 8 the store, uploads and free samples work, but checkout says payments are not open yet and nothing can be bought or unlocked. The server never uses the test "mock" payment mode in production.
+
 ## Known limitations
 
 - No admin two-factor sign-in. Use a long unique password; staff accounts are created only via the script.

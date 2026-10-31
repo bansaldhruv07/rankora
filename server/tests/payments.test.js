@@ -177,4 +177,25 @@ describe('orders, payments and webhooks', () => {
     assert.equal(missing.status, 404)
     assert.equal(missing.body.success, false)
   })
+
+  it('takes no orders while payments are disabled (production without Razorpay keys)', async () => {
+    const { env } = await import('../src/config/env.js')
+    const { setProvider } = await import('../src/services/payments/index.js')
+    await makeProduct({ slug: 'paid-note', price: 99 })
+    const { agent } = await registerUser()
+    env.paymentProvider = 'disabled'
+    setProvider(null)
+    try {
+      const res = await agent.post('/api/orders').send({ product: 'paid-note' })
+      assert.equal(res.status, 503)
+      assert.equal(res.body.error.code, 'PAYMENTS_UNAVAILABLE')
+      const { Order } = await import('../src/models/Order.js')
+      assert.equal(await Order.countDocuments(), 0, 'no order may be created')
+      assert.equal((await openReader(agent, 'paid-note')).status, 403, 'and nothing is unlocked')
+      assert.equal((await client().get('/api/products/paid-note')).status, 200, 'browsing still works')
+    } finally {
+      env.paymentProvider = 'mock'
+      setProvider(null)
+    }
+  })
 })

@@ -47,6 +47,7 @@ router.post(
   paymentLimiter,
   asyncHandler(async (req, res) => {
     const { product: slug, coupon: couponInput } = parse(createSchema, req.body)
+    getProvider() // throws 503 when payments are not enabled, before anything is created
     const product = await Product.findOne({ slug, status: 'published' })
     if (!product) throw notFound('Product not found')
     if (product.pricePaise <= 0) throw badRequest('This product is free and cannot be purchased')
