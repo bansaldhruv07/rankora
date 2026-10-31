@@ -268,12 +268,12 @@ describe('premium vs standalone notes', () => {
   after(stopDb)
   beforeEach(resetDb)
 
-  it('keeps admin-created notes out of Premium unless the admin opts in', async () => {
+  it('includes admin-created notes in Premium unless the admin opts out', async () => {
     const admin = await adminAgent()
-    const created = await admin.post('/api/admin/products').send({ title: 'Standalone', price: 99 })
-    assert.equal(created.body.data.premiumEligible, false)
-    const optIn = await admin.post('/api/admin/products').send({ title: 'In Premium', price: 99, premiumEligible: true })
-    assert.equal(optIn.body.data.premiumEligible, true)
+    const created = await admin.post('/api/admin/products').send({ title: 'In Premium', price: 99 })
+    assert.equal(created.body.data.premiumEligible, true)
+    const optOut = await admin.post('/api/admin/products').send({ title: 'Standalone', price: 99, premiumEligible: false })
+    assert.equal(optOut.body.data.premiumEligible, false)
     void Entitlement
   })
 })

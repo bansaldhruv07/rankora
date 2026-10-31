@@ -21,7 +21,7 @@ let counter = 0
 
 // Uploads many PDFs one after another. Each becomes a draft note; details are filled in afterwards.
 export default function UploadPanel({ onDone, onClose }) {
-  const [defaults, setDefaults] = useState({ subject: '', classLevel: '', price: '' })
+  const [defaults, setDefaults] = useState({ subject: '', classLevel: '', price: '99' })
   const [items, setItems] = useState([])
   const [dragging, setDragging] = useState(false)
   const running = useRef(false)
@@ -111,7 +111,7 @@ export default function UploadPanel({ onDone, onClose }) {
           <option value="12">Class 12</option>
           <option value="both">Both</option>
         </Field>
-        <Field label="Selling price (₹)" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Set later" value={defaults.price} onChange={(e) => setDefaults({ ...defaults, price: e.target.value })} />
+        <Field label="Selling price (₹)" type="number" min="0" step="0.01" inputMode="decimal" placeholder="99" hint="Shown against an original price of ₹199. Notes are also included in Premium." value={defaults.price} onChange={(e) => setDefaults({ ...defaults, price: e.target.value })} />
       </div>
 
       <div

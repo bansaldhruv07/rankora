@@ -341,7 +341,7 @@ function Editor({ product, reload }) {
               <Field label="Original price (₹)" type="number" min="0" step="0.01" inputMode="decimal" value={form.mrp} onChange={set('mrp')} error={fieldErrors.mrp} hint="Optional. A “Save x%” badge appears only when this is higher than the selling price, so use a price you really charged or list." />
               {isBundle && <p className="text-xs text-ink-500">A bundle also shows a saving against its notes’ own prices, calculated automatically.</p>}
               <Field label="Display priority" type="number" min="0" value={form.sortOrder} onChange={set('sortOrder')} hint="Lower numbers appear first." />
-              {!isBundle && <Toggle label="Include in Premium plan" hint="Off by default: Premium subscribers get it without buying. Turn on only if you want that." checked={form.premiumEligible} onChange={(v) => setForm((f) => ({ ...f, premiumEligible: v }))} />}
+              {!isBundle && <Toggle label="Include in Premium plan" hint="On by default: Premium subscribers get it without buying. Turn off to sell it only on its own." checked={form.premiumEligible} onChange={(v) => setForm((f) => ({ ...f, premiumEligible: v }))} />}
             </div>
           </Panel>
 

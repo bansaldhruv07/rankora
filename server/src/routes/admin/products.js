@@ -144,8 +144,8 @@ router.post(
       data.type = 'bundle'
       data.premiumEligible = false
     } else if (kind === 'note') {
-      // New notes are sold on their own; the Premium plan only unlocks them if the admin opts in.
-      data.premiumEligible ??= false
+      // New notes are included in the Premium plan unless the admin switches that off.
+      data.premiumEligible ??= true
     }
     const product = await Product.create({ ...data, kind, slug: slug ?? (await uniqueSlug(data.title)), status: 'draft' })
     await audit(req, 'product.create', { type: 'product', id: product._id, summary: `Created ${kind} "${product.title}"` })
@@ -187,6 +187,10 @@ const uploadQuery = z.object({
   price: z.coerce.number().min(0).max(100000).optional(),
 })
 
+// Standard price of an uploaded note (rupees): the selling price and the original price it is shown against.
+const DEFAULT_PRICE = 99
+const DEFAULT_MRP = 199
+
 // Creates a draft note straight from a PDF (bulk upload sends these one after another).
 router.post(
   '/upload',
@@ -197,6 +201,7 @@ router.post(
     const _id = new mongoose.Types.ObjectId()
     const { info, file } = await storePdf({ id: _id, slug: 'notes' }, req.body, filename)
     const title = info.title || titleFromFilename(filename) || 'Untitled notes'
+    const price = defaults.price ?? DEFAULT_PRICE
     try {
       const product = await Product.create({
         _id,
@@ -208,8 +213,10 @@ router.post(
         classLevel: defaults.classLevel,
         pages: info.pages,
         length: `${info.pages} pages`,
-        pricePaise: Math.round((defaults.price ?? 0) * 100),
-        premiumEligible: false,
+        // Uploaded notes start at the standard price: sold at ₹99 against an original ₹199, and included in Premium.
+        pricePaise: Math.round(price * 100),
+        mrpPaise: Math.round(Math.max(DEFAULT_MRP, price) * 100),
+        premiumEligible: true,
         status: 'draft',
         file,
       })
