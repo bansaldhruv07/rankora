@@ -27,6 +27,12 @@ export const env = {
   paymentProvider: process.env.PAYMENT_PROVIDER || '',
   mockPaymentSecret: process.env.MOCK_PAYMENT_SECRET || 'rankora-mock-secret-not-for-production',
   storageDir: process.env.PRIVATE_STORAGE_DIR || fileURLToPath(new URL('../../storage/private', import.meta.url)),
+  // Where durable files (original PDFs, covers) live: 'disk' (default) or 'gridfs' (inside MongoDB).
+  storageDriver: process.env.STORAGE_DRIVER === 'gridfs' ? 'gridfs' : 'disk',
+  // When true the API also serves the built website (the `dist` folder) from the same address, so cookies stay
+  // first-party and one free service can run everything.
+  serveFrontend: process.env.SERVE_FRONTEND === 'true',
+  frontendDir: process.env.FRONTEND_DIR || fileURLToPath(new URL('../../../dist', import.meta.url)),
   adminSessionHours: int(process.env.ADMIN_SESSION_HOURS, 8),
   maxPdfBytes: int(process.env.MAX_PDF_MB, 60) * 1024 * 1024,
   maxCoverBytes: int(process.env.MAX_COVER_MB, 2) * 1024 * 1024,

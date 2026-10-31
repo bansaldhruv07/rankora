@@ -1,19 +1,19 @@
-# Render blueprint for the Rankora API. In the Render dashboard: New > Blueprint > pick this repository.
-# Values marked `sync: false` are asked for once during setup and are never stored in git.
+# Render blueprint: ONE free web service that runs the API and also serves the website, so everything is on a single
+# address (cookies stay first-party and login works on every browser). Uploaded PDFs and covers are stored inside
+# MongoDB Atlas (STORAGE_DRIVER=gridfs), so nothing depends on this host's disk, which is wiped on every restart.
+#
+# Render dashboard: New > Blueprint > pick this repository. Values marked `sync: false` are asked for once during
+# setup and are never stored in git.
 services:
   - type: web
-    name: rankora-api
+    name: rankora
     runtime: node
-    rootDir: server
-    plan: starter # uploaded PDFs live on a persistent disk, which Render only offers on paid plans
-    buildCommand: npm ci
-    startCommand: node src/server.js
+    plan: free
+    # Install everything (the website build needs dev tools), build the website, then install the API's own packages.
+    buildCommand: npm ci --include=dev && npm run build && npm ci --prefix server
+    startCommand: node server/src/server.js
     healthCheckPath: /api/health
     autoDeploy: true
-    disk:
-      name: rankora-files
-      mountPath: /var/data
-      sizeGB: 5
     envVars:
       - key: NODE_VERSION
         value: 22
@@ -21,23 +21,28 @@ services:
         value: production
       - key: TRUST_PROXY
         value: "true"
-      # Private PDF storage. This must be on the persistent disk above and must never be served publicly.
+      - key: SERVE_FRONTEND
+        value: "true"
+      - key: STORAGE_DRIVER
+        value: gridfs
+      # Scratch space for per-student watermarked copies (a disposable cache that is rebuilt on demand).
       - key: PRIVATE_STORAGE_DIR
-        value: /var/data/private
-      - key: JWT_SECRET
-        generateValue: true
-      # Your MongoDB Atlas connection string (mongodb+srv://user:password@cluster.../rankora).
-      - key: MONGODB_URI
-        sync: false
-      # The exact address of the website, e.g. https://www.yourdomain.com (no trailing slash).
-      - key: FRONTEND_ORIGIN
-        sync: false
-      # "lax" when the site and API share a parent domain (www.example.com + api.example.com), which also
-      # works in Safari. "none" only if they are on unrelated domains (some browsers block that).
+        value: /tmp/rankora
+      # Free instances have 512 MB of memory; large PDFs are processed in memory, so keep uploads modest.
+      - key: MAX_PDF_MB
+        value: 25
       - key: COOKIE_SAMESITE
         value: lax
-      # Payments stay closed until Razorpay is set up. To open them, add the three RAZORPAY_* values
-      # below and change this to razorpay (or delete it).
+      - key: JWT_SECRET
+        generateValue: true
+      # Your MongoDB Atlas connection string: mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/rankora
+      - key: MONGODB_URI
+        sync: false
+      # This service's own address, e.g. https://rankora.onrender.com (shown in the dashboard once created).
+      - key: FRONTEND_ORIGIN
+        sync: false
+      # Payments stay closed until Razorpay is set up. To open them: add the three RAZORPAY_* values in the
+      # dashboard, then delete this variable (or set it to razorpay).
       - key: PAYMENT_PROVIDER
         value: disabled
       - key: SUPPORT_EMAIL

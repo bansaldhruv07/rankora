@@ -189,6 +189,15 @@ describe('orders, payments and webhooks', () => {
       const res = await agent.post('/api/orders').send({ product: 'paid-note' })
       assert.equal(res.status, 503)
       assert.equal(res.body.error.code, 'PAYMENTS_UNAVAILABLE')
+      // In production unexpected 5xx messages are hidden, but this deliberate notice must reach the student.
+      env.isProd = true
+      try {
+        const prod = await agent.post('/api/orders').send({ product: 'paid-note' })
+        assert.equal(prod.status, 503)
+        assert.match(prod.body.error.message, /not open yet/)
+      } finally {
+        env.isProd = false
+      }
       const { Order } = await import('../src/models/Order.js')
       assert.equal(await Order.countDocuments(), 0, 'no order may be created')
       assert.equal((await openReader(agent, 'paid-note')).status, 403, 'and nothing is unlocked')

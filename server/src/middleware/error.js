@@ -10,7 +10,9 @@ export function errorHandler(err, req, res, _next) {
 
   if (status >= 500) {
     logger.error('request failed', { method: req.method, path: req.path, error: err.message, stack: env.isProd ? undefined : err.stack })
-    if (env.isProd) message = 'Something went wrong'
+    // Unexpected failures never leak details in production. Errors we raise on purpose (AppError) carry a message
+    // written for the user, such as "Payments are not open yet", and are shown as written.
+    if (env.isProd && !(err instanceof AppError)) message = 'Something went wrong'
   }
   res.status(status).json({ success: false, error: { code, message, ...(details ? { details } : {}) } })
 }
