@@ -34,9 +34,11 @@ function ReviewCard({ review }) {
 }
 
 // A single endless row. The list is repeated so the loop has no seam; the copy is hidden from screen readers.
-// Production shows real reviews only (none yet = the band is hidden). The dev server shows demo cards.
+// Real reviews (REVIEWS in src/data/home.js) are shown as soon as there is at least one. Until then the sample cards
+// fill the row, with a single line under the heading saying so, so nobody mistakes them for real students.
 export default function ReviewsWall() {
-  const reviews = REVIEWS.length > 0 ? REVIEWS : import.meta.env.DEV ? DEMO_REVIEWS : []
+  const isSample = REVIEWS.length === 0
+  const reviews = isSample ? DEMO_REVIEWS : REVIEWS
   if (reviews.length === 0) return null
   // Short lists would leave gaps in the loop, so repeat them until one copy is wide enough.
   const row = reviews.length >= 5 ? reviews : [...reviews, ...reviews, ...reviews]
@@ -50,6 +52,7 @@ export default function ReviewsWall() {
           <span aria-hidden="true" className="h-px w-8 bg-ember-500" />
         </p>
         <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">Revision that actually gets done</h2>
+        {isSample && <p className="mt-2 text-sm text-ink-500">Sample reviews for now. Real student reviews are on the way.</p>}
       </Reveal>
       <div className="marquee-mask overflow-hidden">
         <div className="flex w-max animate-marquee-slow gap-4 py-2 hover:[animation-play-state:paused] sm:gap-5">

@@ -128,3 +128,17 @@ export function SparkleArt({ className }) {
     </svg>
   )
 }
+
+// A mountain with a flag on the summit: the "toughest chapters" bundle.
+export function PeakArt({ className }) {
+  return (
+    <svg viewBox="0 0 120 100" className={className} aria-hidden="true">
+      <path d="M4 92 L44 26 L66 60 L80 42 L116 92 Z" fill={EMBER_SOFT} opacity="0.35" />
+      <path {...base} d="M4 92 L44 26 L66 60 L80 42 L116 92 Z" />
+      <path {...base} strokeWidth="1.8" d="M34 44 L44 26 L54 44 L49 40 L44 46 L39 40 Z" fill="currentColor" opacity="0.85" />
+      <path {...base} d="M44 26 V8" />
+      <path d="M44 8 L64 14 L44 21 Z" fill={EMBER} />
+      <path {...base} strokeWidth="2" opacity="0.6" d="M92 62 L98 52 L104 62" />
+    </svg>
+  )
+}

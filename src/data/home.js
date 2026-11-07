@@ -20,12 +20,12 @@ export const HOW_IT_WORKS = [
 ]
 
 // REAL student reviews only, with their permission. Each: { id, name, detail, rating (4 or 5), quote }.
-// The reviews band on the home page stays hidden until this list has entries. Never paste invented
-// reviews or ratings here: shown to buyers as real, they are misleading and can break consumer law.
+// As soon as this list has one entry, the home page shows only these (and drops the sample cards below).
+// Never paste invented reviews or ratings here: shown to buyers as real, they are misleading and can break consumer law.
 export const REVIEWS = []
 
-// Layout-only demo cards, used ONLY by the local dev server (never in the production build) so you can
-// see how the band looks. Delete when you have real reviews.
+// Sample cards shown (with a "sample reviews" line under the heading) only while REVIEWS above is empty.
+// They disappear automatically as soon as you add one real review. Delete this list when you have enough.
 export const DEMO_REVIEWS = [
   { id: 'd1', name: 'Aarav S.', detail: 'Class 12', rating: 5, quote: 'I finished a whole chapter the night before a test instead of rereading my own messy notes.' },
   { id: 'd2', name: 'Meera K.', detail: 'Class 11', rating: 5, quote: 'Short and to the point. I stopped skipping revision because it no longer felt like a mountain.' },

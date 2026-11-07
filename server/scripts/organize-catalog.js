@@ -142,6 +142,15 @@ const BUNDLES = [
   { slug: 'mathematics-complete', subject: 'mathematics', classLevel: 'both', chapters: 'ALL', price: 999, mrp: 1499, sortOrder: 8,
     title: 'Complete Mathematics: Class 11 and 12',
     summary: 'Every Mathematics chapter in one pack, in book order. Revise the whole subject before JEE.' },
+  { slug: 'chemistry-toughest-chapters', subject: 'chemistry', classLevel: 'both', chapters: 'HARD', discount: 0.3, sortOrder: 10,
+    title: 'Toughest Chemistry Chapters Pack',
+    summary: 'The chapters students find hardest, together at a lower price.' },
+  { slug: 'mathematics-toughest-chapters', subject: 'mathematics', classLevel: 'both', chapters: 'HARD', discount: 0.3, sortOrder: 11,
+    title: 'Toughest Mathematics Chapters Pack',
+    summary: 'The chapters students find hardest, together at a lower price.' },
+  { slug: 'jee-toughest-chapters', subject: 'mixed', classLevel: 'both', chapters: 'HARD_ALL', minSubjects: 2, discount: 0.3, sortOrder: 12,
+    title: 'Toughest JEE Chapters Pack',
+    summary: 'The hardest chapters from every subject, together at a lower price.' },
   { slug: 'jee-complete-pcm', subject: 'mixed', classLevel: 'both', chapters: 'EVERYTHING', minSubjects: 3, price: 2499, mrp: 4497, sortOrder: 9,
     title: 'Complete JEE: Physics, Chemistry and Mathematics',
     summary: 'Every chapter of all three subjects in one pack. The full syllabus, revised in time.' },
@@ -242,6 +251,7 @@ for (const spec of BUNDLES) {
   if (Array.isArray(spec.chapters)) picked = primaries.filter((p) => p.note.subject === spec.subject && spec.chapters.includes(p.hit.name))
   else if (spec.chapters === 'HARD') picked = primaries.filter((p) => p.note.subject === spec.subject && p.hit.hard)
   else if (spec.chapters === 'ALL') picked = primaries.filter((p) => p.note.subject === spec.subject)
+  else if (spec.chapters === 'HARD_ALL') picked = primaries.filter((p) => p.hit.hard)
   else picked = primaries
   picked.sort((a, b) => a.set.sortOrder - b.set.sortOrder)
 
