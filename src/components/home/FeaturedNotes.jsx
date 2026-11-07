@@ -8,26 +8,25 @@ import { useApi } from '../../hooks/useApi'
 import { ROUTES } from '../../utils/routes'
 
 // Live from the catalogue: it shows what is actually on sale, and renders nothing until something is published.
+// The toughest chapters come first (they are what students go looking for), then the rest in book order.
 export default function FeaturedNotes() {
   const { access } = useAuth()
-  const { data } = useApi('/products?limit=4&sort=featured')
+  const { data: all } = useApi('/products?limit=50&sort=featured')
+  const data = all && [...all.filter((p) => p.difficulty === 'Hard'), ...all.filter((p) => p.difficulty !== 'Hard')].slice(0, 4)
   if (!data?.length) return null
 
   return (
-    <section className="border-t border-line-soft bg-ivory-100/60 py-16 sm:py-20">
+    <section className="border-y border-line-soft bg-ivory-100/60 py-12 sm:py-14">
       <div className="page-container">
         <Reveal>
-          <SectionHeading
-            eyebrow="Notes library"
-            title="Revision notes, read inside Rankora"
-            description="Chapter-wise PDF notes you read in the Rankora reader, on your phone or laptop. It remembers your page."
-          >
+          <SectionHeading eyebrow="Notes library" title="Start with a chapter you are weak in">
+
             <Button to={ROUTES.notes} variant="primary" iconRight={ArrowRight}>
               Browse all notes
             </Button>
           </SectionHeading>
         </Reveal>
-        <ul className="mt-10 grid grid-cols-2 gap-x-4 gap-y-9 lg:grid-cols-4 lg:gap-x-6">
+        <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-9 lg:grid-cols-4 lg:gap-x-6">
           {data.map((product) => (
             <li key={product.id}>
               <ProductCard product={product} owned={access.productSlugs.includes(product.slug) || (access.premium && product.premiumIncluded)} />

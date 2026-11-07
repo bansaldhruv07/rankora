@@ -8,8 +8,7 @@
     "start": "node src/server.js",
     "create-admin": "node scripts/create-admin.js",
     "dev:db": "node scripts/dev-db.js",
-    "test": "node --test --test-concurrency=1 \"tests/*.test.js\"",
-    "setup-plans": "node scripts/setup-plans.js"
+    "test": "node --test --test-concurrency=1 \"tests/*.test.js\""
   },
   "engines": {
     "node": ">=20"

@@ -24,7 +24,7 @@ export default function Logo({ className, to = '/', onClick, tagline = false }) 
       <LogoMark className="transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105" />
       <span className="flex flex-col leading-none">
         <span className="font-display text-[1.4rem] font-semibold tracking-tight text-ink-900">Rankora</span>
-        {tagline && <span className="mt-1 hidden font-mono text-[0.58rem] font-medium uppercase tracking-[0.2em] text-ember-600 sm:block">Notes by IITD × DTU</span>}
+        {tagline && <span className="mt-1 hidden font-mono text-[0.58rem] font-medium uppercase tracking-[0.2em] text-ember-600 sm:block">Short notes · Fast revision</span>}
       </span>
     </Link>
   )

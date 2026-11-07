@@ -7,6 +7,8 @@ const VARIANTS = {
   outline: 'border border-ink-900/25 text-ink-900 hover:border-ink-900 hover:bg-ivory-100',
   soft: 'bg-ivory-200 text-ink-900 hover:bg-ivory-300',
   ghost: 'text-ink-800 hover:bg-ivory-200',
+  // For use on the always-dark night panels (same look in light and dark theme).
+  onDark: 'border border-white/30 text-white hover:border-white hover:bg-white/10',
 }
 
 const SIZES = {

@@ -260,18 +260,11 @@ export default function Account() {
       </PageHeader>
 
       <section className="page-container space-y-8 py-10 sm:py-14">
-        <div className="flex flex-wrap items-center gap-3">
-          {access.premium ? (
+        {access.premium && (
+          <div className="flex flex-wrap items-center gap-3">
             <Badge tone="sage">Premium active until {formatLongDate(access.premiumUntil)}</Badge>
-          ) : (
-            <>
-              <Badge tone="neutral">Free plan</Badge>
-              <Button to={ROUTES.pricing} size="sm" variant="outline">
-                See Premium
-              </Button>
-            </>
-          )}
-        </div>
+          </div>
+        )}
 
         <Tabs
           tabs={[

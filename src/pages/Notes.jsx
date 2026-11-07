@@ -68,7 +68,7 @@ export default function Notes() {
     )
 
   const { data: catalog } = useApi('/products/catalog')
-  const { data: bundleData } = useApi('/products?kind=bundle&limit=6')
+  const { data: bundleData } = useApi('/products?kind=bundle&limit=12')
 
   const query = useMemo(() => {
     const p = new URLSearchParams({ limit: String(PAGE_SIZE), sort })

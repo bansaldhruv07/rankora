@@ -21,15 +21,15 @@ export default function Accordion({ items, defaultOpen = 0, className }) {
                 aria-expanded={open}
                 aria-controls={panelId}
                 onClick={() => setOpenIndex(open ? -1 : index)}
-                className="group flex w-full items-center justify-between gap-6 py-5 text-left"
+                className="group flex w-full items-center justify-between gap-6 py-3.5 text-left"
               >
-                <span className="font-display text-lg font-medium text-ink-900 transition-colors group-hover:text-ember-600 sm:text-xl">
+                <span className="font-display text-base font-medium text-ink-900 transition-colors group-hover:text-ember-600 sm:text-lg">
                   {item.question}
                 </span>
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'grid size-8 shrink-0 place-items-center rounded-full border border-line text-ink-700 transition duration-300 group-hover:border-ember-500 group-hover:text-ember-600',
+                    'grid size-7 shrink-0 place-items-center rounded-full border border-line text-ink-700 transition duration-300 group-hover:border-ember-500 group-hover:text-ember-600',
                     open && 'rotate-45 border-ember-500 bg-ember-50 text-ember-600',
                   )}
                 >
@@ -47,7 +47,7 @@ export default function Accordion({ items, defaultOpen = 0, className }) {
               )}
             >
               <div className="overflow-hidden">
-                <p className="max-w-3xl pb-6 pr-12 leading-relaxed text-ink-600">{item.answer}</p>
+                <p className="max-w-3xl pb-4 pr-10 text-[0.95rem] leading-relaxed text-ink-600">{item.answer}</p>
               </div>
             </div>
           </div>

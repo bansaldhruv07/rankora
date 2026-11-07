@@ -1,6 +1,6 @@
 # Rankora
 
-JEE notes site: a **notes marketplace** where students buy chapter notes (singly, in bundles, or with Premium) written by IIT Delhi students and read them in a secure in-site PDF reader. React 19 + Vite + Tailwind 4 frontend; Express + MongoDB API in [server/](server/README.md).
+JEE notes site: a **notes marketplace** where students buy chapter notes (singly or in subject bundles) made by an IIT Delhi student and read them in a secure in-site PDF reader. React 19 + Vite + Tailwind 4 frontend; Express + MongoDB API in [server/](server/README.md).
 
 ```
 src/

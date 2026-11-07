@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import Logo from '../common/Logo'
-import CollegeBadge from '../common/CollegeBadge'
 import SocialIcons from '../common/SocialIcons'
 import Button from '../ui/Button'
+import { SITE, isLink } from '../../data/site'
 import { ROUTES, notesPath } from '../../utils/routes'
 
 const COLUMNS = [
@@ -21,7 +21,7 @@ const COLUMNS = [
     links: [
       { label: 'Class 11 notes', to: notesPath({ class: '11' }) },
       { label: 'Class 12 notes', to: notesPath({ class: '12' }) },
-      { label: 'Pricing and Premium', to: ROUTES.pricing },
+      { label: 'Pricing and subject packs', to: ROUTES.pricing },
     ],
   },
   {
@@ -42,15 +42,11 @@ export default function Footer() {
           <div className="max-w-sm">
             <Logo />
             <p className="mt-5 font-display text-2xl font-medium leading-snug text-ink-900">
-              Notes by IIT Delhi and DTU students.
+              Short notes. Faster JEE revision.
             </p>
             <p className="mt-3 leading-relaxed text-ink-600">
-              Concise, chapter-wise JEE notes written by students from IIT Delhi and DTU who have been through the exam.
+              Chapter-wise notes made by an IIT Delhi student and used in her own JEE prep. Concepts kept, padding cut, so revision fits the time you have left.
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <CollegeBadge college="iitd" label />
-              <CollegeBadge college="dtu" label />
-            </div>
             <SocialIcons className="mt-5" />
             <Button to={ROUTES.notes} variant="primary" className="mt-6" iconRight={ArrowRight}>
               Browse the notes
@@ -81,7 +77,21 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col gap-2 border-t border-line pt-6 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Rankora</p>
+          <p>
+            © {new Date().getFullYear()} Rankora. Founded by{' '}
+            {SITE.founders.map((founder, index) => (
+              <span key={founder.id}>
+                {index > 0 && ' and '}
+                {isLink(founder.linkedin) ? (
+                  <a href={founder.linkedin} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:text-ember-600 hover:underline">
+                    {founder.name}
+                  </a>
+                ) : (
+                  founder.name
+                )}
+              </span>
+            ))}
+          </p>
           <p>
             Notes are for personal study and are protected by your name on every page.
           </p>

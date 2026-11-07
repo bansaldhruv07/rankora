@@ -299,7 +299,6 @@ function Editor({ product, reload }) {
               {!isBundle && (
                 <Field as="select" label="Kind of notes" value={form.type} onChange={set('type')}>
                   <option value="notes">Short notes</option>
-                  <option value="formula">Formula sheet</option>
                 </Field>
               )}
               <Field as="select" label="Difficulty" value={form.difficulty} onChange={set('difficulty')}>
@@ -309,7 +308,7 @@ function Editor({ product, reload }) {
                 <option>Hard</option>
               </Field>
               {!isBundle && <Field label="Number of pages" type="number" min="1" value={form.pages} onChange={set('pages')} hint="Filled from the PDF. Change only if you want a different number shown." error={fieldErrors.pages} />}
-              <Field label="Tags" value={form.tags} onChange={set('tags')} hint="Comma separated, e.g. mechanics, formulae, revision" error={fieldErrors.tags} />
+              <Field label="Tags" value={form.tags} onChange={set('tags')} hint="Comma separated, e.g. mechanics, revision, jee-main" error={fieldErrors.tags} />
               <Field className="sm:col-span-2" as="textarea" rows={2} label="Short description" value={form.summary} onChange={set('summary')} maxLength={1000} hint="One or two sentences shown on cards and at the top of the page." />
               <Field className="sm:col-span-2" as="textarea" rows={7} label="Detailed description" value={form.description} onChange={set('description')} maxLength={8000} hint="How these notes help revision. Separate paragraphs with a blank line. Plain text only." />
             </div>

@@ -1,26 +1,22 @@
 import Reveal from '../ui/Reveal'
-import SectionHeading from '../ui/SectionHeading'
 import { HOW_IT_WORKS } from '../../data/home'
 
 export default function HowItWorks() {
   return (
     <section className="border-y border-line-soft bg-ivory-100/60">
-      <div className="page-container py-20 sm:py-24">
+      <div className="page-container py-12 sm:py-14">
         <Reveal>
-          <SectionHeading
-            eyebrow="How it works"
-            title="From search to reading in a few minutes"
-            description="No downloads, no waiting for a link. Try a sample, buy, and start."
-          />
+          <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">From search to reading in minutes</h2>
         </Reveal>
-        <ol className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="relative mt-8 grid grid-cols-2 gap-x-5 gap-y-7 lg:grid-cols-4">
+          <span aria-hidden="true" className="absolute left-0 right-0 top-[1.05rem] hidden h-px bg-line lg:block" />
           {HOW_IT_WORKS.map((step, index) => (
-            <Reveal as="li" key={step.id} delay={index * 90} className="relative border-t border-ink-900/20 pt-5">
-              <span className="font-mono text-sm font-medium text-ember-600">
-                {String(index + 1).padStart(2, '0')}
+            <Reveal as="li" key={step.id} delay={index * 90} className="relative">
+              <span className="relative grid size-9 place-items-center rounded-full border border-ember-500/40 bg-surface font-mono text-sm font-semibold text-ember-600 shadow-soft">
+                {index + 1}
               </span>
-              <h3 className="mt-3 text-xl font-semibold">{step.title}</h3>
-              <p className="mt-2 leading-relaxed text-ink-600">{step.body}</p>
+              <h3 className="mt-3 text-lg font-semibold">{step.title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-ink-600">{step.body}</p>
             </Reveal>
           ))}
         </ol>

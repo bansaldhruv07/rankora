@@ -1,90 +1,36 @@
-import { BookOpen, Eye, PenLine, Smartphone, Sigma, Zap } from 'lucide-react'
+import { BookOpen, Eye, GraduationCap, Layers, ScanText } from 'lucide-react'
 
+// "Why Rankora": one line each, written for a student with limited time left.
 export const BENEFITS = [
-  {
-    id: 'authors',
-    icon: PenLine,
-    title: 'Written by IIT Delhi and DTU students',
-    body: 'People who have been through JEE write down what actually worked: the definitions that matter, the steps that save time and the mistakes to avoid.',
-  },
-  {
-    id: 'concise',
-    icon: BookOpen,
-    title: 'Short enough to finish',
-    body: 'Each chapter is cut down to what you need for revision, so a full pass fits a sitting instead of a week.',
-  },
-  {
-    id: 'formulas',
-    icon: Sigma,
-    title: 'Formulas where you look for them',
-    body: 'Key results are boxed on the page and traps are called out, so you can scan a chapter in minutes before a test.',
-  },
-  {
-    id: 'sample',
-    icon: Eye,
-    title: 'See it before you pay',
-    body: 'Notes with a free sample open in the same reader you will use after buying. Judge the handwriting, depth and layout yourself.',
-  },
-  {
-    id: 'anywhere',
-    icon: Smartphone,
-    title: 'Read on any screen',
-    body: 'Phone, tablet or laptop. The reader remembers your page, so you pick up exactly where you stopped.',
-  },
-  {
-    id: 'instant',
-    icon: Zap,
-    title: 'Instant access',
-    body: 'The moment your payment is verified the note is in your library. No waiting for a link or a file.',
-  },
+  { id: 'short', icon: BookOpen, title: 'A chapter in minutes', body: 'Open it, revise it, move to the next one.' },
+  { id: 'subject', icon: Layers, title: 'A whole subject in time', body: 'Finish Physics, Chemistry or Maths with days to spare.' },
+  { id: 'content', icon: ScanText, title: 'Nothing important missing', body: 'The padding is cut. The concepts stay.' },
+  { id: 'sample', icon: Eye, title: 'Read before you pay', body: 'Check the free sample first. Buy only if it works for you.' },
+  { id: 'authors', icon: GraduationCap, title: 'By an IIT Delhi student', body: 'Made and used in her own JEE prep, so it is what actually worked.' },
 ]
+
+// What students say when they are short on time. Shown as crossed-out chips in the "Why" section.
+export const PAIN_POINTS = ['Backlog chapters', 'No time to reread', 'Revision keeps slipping']
 
 export const HOW_IT_WORKS = [
-  {
-    id: 'pick',
-    title: 'Pick your chapter',
-    body: 'Browse by subject, class and chapter, or search for the topic you are stuck on.',
-  },
-  {
-    id: 'sample',
-    title: 'Read the free sample',
-    body: 'Open the sample pages and check the notes suit the way you learn.',
-  },
-  {
-    id: 'buy',
-    title: 'Buy a note, a bundle or Premium',
-    body: 'Pay once through Razorpay. Your access begins as soon as the payment is verified.',
-  },
-  {
-    id: 'read',
-    title: 'Revise anywhere',
-    body: 'Open it from your library on any device. It resumes on the page you left.',
-  },
+  { id: 'pick', title: 'Pick a chapter', body: 'Filter by subject and class.' },
+  { id: 'sample', title: 'Read the sample', body: 'Check the depth first.' },
+  { id: 'buy', title: 'Buy what you need', body: 'A note or a full subject pack.' },
+  { id: 'read', title: 'Revise anywhere', body: 'Resumes on your last page.' },
 ]
 
-// These are SAMPLE reviews so the layout can be seen. Each is flagged `sample: true`, which shows a
-// "Sample review" tag on the site. Replace them with real student reviews (with their permission) and
-// set `sample: false` (or delete the flag) to remove the tag.
-export const TESTIMONIALS = [
-  {
-    id: 't1',
-    name: 'Aarav S.',
-    detail: 'Class 12, preparing for JEE',
-    quote: 'The formula boxes saved me. I could go through a whole chapter the night before a test instead of rereading my own messy notes.',
-    sample: true,
-  },
-  {
-    id: 't2',
-    name: 'Meera K.',
-    detail: 'Class 11',
-    quote: 'It is short and to the point. The pages feel like notes from a senior who has been through it, which is exactly what I wanted.',
-    sample: true,
-  },
-  {
-    id: 't3',
-    name: 'Rohan P.',
-    detail: 'Dropper',
-    quote: 'Being able to open it on my phone and land on the page I left is the small thing that made me actually revise on the bus.',
-    sample: true,
-  },
+// REAL student reviews only, with their permission. Each: { id, name, detail, rating (4 or 5), quote }.
+// The reviews band on the home page stays hidden until this list has entries. Never paste invented
+// reviews or ratings here: shown to buyers as real, they are misleading and can break consumer law.
+export const REVIEWS = []
+
+// Layout-only demo cards, used ONLY by the local dev server (never in the production build) so you can
+// see how the band looks. Delete when you have real reviews.
+export const DEMO_REVIEWS = [
+  { id: 'd1', name: 'Aarav S.', detail: 'Class 12', rating: 5, quote: 'I finished a whole chapter the night before a test instead of rereading my own messy notes.' },
+  { id: 'd2', name: 'Meera K.', detail: 'Class 11', rating: 5, quote: 'Short and to the point. I stopped skipping revision because it no longer felt like a mountain.' },
+  { id: 'd3', name: 'Rohan P.', detail: 'Dropper', rating: 4, quote: 'Opening it on my phone and landing on the page I left is why I actually revise on the bus now.' },
+  { id: 'd4', name: 'Ananya T.', detail: 'Class 12', rating: 5, quote: 'The free sample sold me. I could see the depth before paying anything.' },
+  { id: 'd5', name: 'Kabir M.', detail: 'Dropper', rating: 5, quote: 'I bought only the two chapters I was weak in. Cheaper than a full course and I used every page.' },
+  { id: 'd6', name: 'Ishita R.', detail: 'Class 11', rating: 4, quote: 'Clean pages, no clutter. Easy to go through before a chapter test.' },
 ]

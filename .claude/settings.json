@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i 's#^  scripts/setup-plans.js  creates the Premium plan products the Pricing page sells \\(safe in production\\)#  scripts/organize-catalog.js  JEE chapter order, hard-chapter prices, bundles and coupons \\(dry run first; see its header\\)#; /^npm run setup-plans /d; /^   npm run setup-plans$/d; s#There is no demo catalogue: every note on the site is one you upload in the admin area. Run `npm run setup-plans` once on each database \\(local and production\\) so the Premium plan can be bought.#There is no demo catalogue: every note on the site is one you upload in the admin area. After uploading, run `node scripts/organize-catalog.js` \\(dry run\\) and then with `--apply` to put notes in JEE order and build the subject bundles.#' server/README.md)",
+      "Bash(sed -i 's#\\(singly, in bundles, or with Premium\\)#\\(singly or in subject bundles\\)#' README.md)",
+      "Bash(python -)",
+      "Bash(node --check scripts/organize-catalog.js)"
+    ]
+  }
+}

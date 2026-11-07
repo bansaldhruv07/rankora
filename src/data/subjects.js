@@ -4,7 +4,7 @@ export const SUBJECTS = [
     name: 'Physics',
     tagline: 'Concepts that survive numericals',
     description:
-      'Mechanics, electricity, optics and modern physics, trimmed to the ideas and formulas that decide marks.',
+      'Mechanics, electricity, optics and modern physics, trimmed to the ideas that decide marks.',
     chapters: [
       'Units and Measurements',
       'Kinematics',

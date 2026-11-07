@@ -6,13 +6,9 @@ import { FAQ } from '../../data/faq'
 export default function FaqSection() {
   return (
     <section className="border-t border-line-soft bg-ivory-100/60">
-      <div className="page-container grid gap-12 py-20 sm:py-24 lg:grid-cols-[1fr_1.6fr]">
+      <div className="page-container grid gap-8 py-12 sm:py-14 lg:grid-cols-[0.7fr_1.6fr] lg:gap-12">
         <Reveal>
-          <SectionHeading
-            eyebrow="FAQ"
-            title="Questions, answered plainly"
-            description="Who writes the notes, how you read them, and how buying works."
-          />
+          <SectionHeading eyebrow="FAQ" title="Quick answers" />
         </Reveal>
         <Reveal delay={100}>
           <Accordion items={FAQ} />

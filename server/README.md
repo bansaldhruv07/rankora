@@ -17,7 +17,7 @@ server/
     services/             storage, pdf (validation), watermark, documents (derived-copy cache), reader,
                           viewerSessions, entitlements, pricing (coupons), settlement, payments/, audit, mailer
   scripts/create-admin.js first admin / editor (prompts for a hidden password)
-  scripts/setup-plans.js  creates the Premium plan products the Pricing page sells (safe in production)
+  scripts/organize-catalog.js  JEE chapter order, hard-chapter prices, bundles and coupons (dry run first; see its header)
   tests/                  node:test + supertest + in-memory MongoDB (96 tests)
 ```
 
@@ -31,7 +31,6 @@ Copy-Item .env.example .env
 
 npm run dev:db          # terminal 1: local MongoDB (skip if you use Atlas or have MongoDB installed)
 npm run create-admin    # terminal 2: creates your admin; asks for email, name and a hidden password (12+ chars)
-npm run setup-plans     # once per database: creates the Premium plan products used by /pricing
 npm run dev             # API on :5000
 
 cd ..; npm install; npm run dev     # terminal 3: frontend on :5173, proxies /api to :5000
@@ -40,7 +39,7 @@ npm test                # in server/: no MongoDB install needed
 
 Generate a secret: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`
 
-There is no demo catalogue: every note on the site is one you upload in the admin area. Run `npm run setup-plans` once on each database (local and production) so the Premium plan can be bought.
+There is no demo catalogue: every note on the site is one you upload in the admin area. After uploading, run `node scripts/organize-catalog.js` (dry run) and then with `--apply` to put notes in JEE order and build the subject bundles.
 
 ## First admin account (secure)
 
@@ -131,7 +130,6 @@ One free Render service runs the API **and** the website, and your PDFs are stor
    cd C:\Users\hp\Documents\Projects\rankora\server
    $env:MONGODB_URI = "mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/rankora"
    npm run create-admin
-   npm run setup-plans
    Remove-Item Env:MONGODB_URI
    ```
 6. **Sign in at `/admin`**, upload your notes, publish.

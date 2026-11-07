@@ -51,7 +51,7 @@ export default function BundleCard({ bundle, owned = false, className }) {
               <PriceTag product={bundle} />
               {bundle.savings && (
                 <p className="mt-1.5 text-xs text-ink-500">
-                  {formatPrice(bundle.separatePrice)} if bought separately · you save {formatPrice(bundle.savings.amount)}
+                  {formatPrice(bundle.savings.referencePrice)} if bought separately · you save {formatPrice(bundle.savings.amount)}
                 </p>
               )}
             </>

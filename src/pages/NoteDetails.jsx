@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { BookOpen, Check, ChevronRight, Eye, FileText, Lock, ShieldCheck, Smartphone } from 'lucide-react'
-import CollegeBadge from '../components/common/CollegeBadge'
 import BundleCard from '../components/store/BundleCard'
 import PriceTag from '../components/store/PriceTag'
 import ProductCard from '../components/store/ProductCard'
@@ -172,7 +171,7 @@ function Detail({ product }) {
                     <PriceTag product={product} size="lg" className="mt-1" />
                     {product.savings && (
                       <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                        {isBundle ? `${formatPrice(product.separatePrice)} if you bought these notes one by one. ` : ''}You save {formatPrice(product.savings.amount)}.
+                        {isBundle ? `${formatPrice(product.savings.referencePrice)} if you bought these notes one by one. ` : ''}You save {formatPrice(product.savings.amount)}.
                       </p>
                     )}
                     <div className="mt-6 flex flex-col gap-3">
@@ -221,11 +220,10 @@ function Detail({ product }) {
                         Secure payment through Razorpay
                       </li>
                     </ul>
-                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line-soft pt-4 text-xs text-ink-600">
-                      <CollegeBadge college="iitd" />
-                      <CollegeBadge college="dtu" />
-                      <span>Written by IIT Delhi and DTU students</span>
-                    </div>
+                    <p className="mt-5 flex items-center gap-2 border-t border-line-soft pt-4 text-xs text-ink-600">
+                      <ShieldCheck size={15} aria-hidden="true" className="shrink-0 text-ember-600" />
+                      Made by an IIT Delhi student and used in her own JEE prep
+                    </p>
                   </>
                 )}
               </Card>
