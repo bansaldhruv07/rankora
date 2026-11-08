@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react'
 import Logo from '../common/Logo'
 import SocialIcons from '../common/SocialIcons'
 import Button from '../ui/Button'
+import { useFeatures } from '../../hooks/useFeatures'
 import { SITE, isLink } from '../../data/site'
 import { ROUTES, notesPath } from '../../utils/routes'
 
@@ -35,6 +36,7 @@ const COLUMNS = [
 ]
 
 export default function Footer() {
+  const { referrals } = useFeatures()
   return (
     <footer className="mt-24 border-t border-line bg-ivory-100">
       <div className="page-container py-14">
@@ -60,7 +62,7 @@ export default function Footer() {
                   {column.title}
                 </h2>
                 <ul className="mt-4 space-y-3">
-                  {column.links.map((link) => (
+                  {[...column.links, ...(referrals && column.title === 'Your account' ? [{ label: 'Refer and earn', to: '/refer' }] : [])].map((link) => (
                     <li key={link.label}>
                       <Link
                         to={link.to}

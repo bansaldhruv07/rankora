@@ -4,6 +4,7 @@ import ScrollToTop from "./components/common/ScrollToTop";
 import Layout from "./components/layout/Layout";
 import AuthProvider from "./components/auth/AuthProvider";
 import CartProvider from "./components/cart/CartProvider";
+import GrowthCapture from "./components/growth/GrowthCapture";
 import ToastProvider from "./components/ui/ToastProvider";
 import Account from "./pages/Account";
 import Cart from "./pages/Cart";
@@ -14,7 +15,9 @@ import Library from "./pages/Library";
 import NoteDetails from "./pages/NoteDetails";
 import Notes from "./pages/Notes";
 import Policies from "./pages/Policies";
+import Refer from "./pages/Refer";
 import ResetPassword from "./pages/ResetPassword";
+import TeacherStats from "./pages/TeacherStats";
 
 // The reader (PDF.js) and the admin area are only downloaded when someone opens them.
 const Reader = lazy(() => import("./pages/Reader"));
@@ -32,6 +35,7 @@ export default function App() {
       <AuthProvider>
       <CartProvider>
       <ScrollToTop />
+      <GrowthCapture />
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -54,6 +58,8 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/refer" element={<Refer />} />
+          <Route path="/t/:token" element={<TeacherStats />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

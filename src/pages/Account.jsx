@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Mail } from 'lucide-react'
+import { BookOpen, Gift, Mail } from 'lucide-react'
 import PageHeader from '../components/common/PageHeader'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -9,6 +9,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { TabPanel, Tabs } from '../components/ui/Tabs'
 import { useAuth } from '../hooks/useAuth'
 import { useApi } from '../hooks/useApi'
+import { useFeatures } from '../hooks/useFeatures'
 import { useToast } from '../hooks/useToast'
 import { api } from '../lib/api'
 import { formatLongDate, formatPrice } from '../utils/format'
@@ -130,8 +131,9 @@ function Orders() {
 
 function Profile() {
   const { user, refresh } = useAuth()
-  const profile = useForm({ name: user.name }, async ({ name }) => {
-    await api('/auth/me', { method: 'PATCH', body: { name } })
+  const { teachers } = useFeatures()
+  const profile = useForm({ name: user.name, phone: user.phone ?? '' }, async ({ name, phone }) => {
+    await api('/auth/me', { method: 'PATCH', body: { name, ...(teachers ? { phone } : {}) } })
     await refresh()
   }, 'Profile updated', { reset: false })
   const password = useForm({ currentPassword: '', newPassword: '' }, (values) => api('/auth/change-password', { method: 'POST', body: values }), 'Password changed')
@@ -143,10 +145,13 @@ function Profile() {
         <p className="mt-1 text-sm text-ink-600">Your name appears on the watermark of every page you read.</p>
         <form onSubmit={profile.onSubmit} className="mt-5 space-y-4" noValidate>
           <Field label="Name" value={profile.values.name} onChange={profile.set('name')} autoComplete="name" error={profile.fields.name} />
+          {teachers && (
+            <Field label="Phone (optional)" type="tel" value={profile.values.phone} onChange={profile.set('phone')} autoComplete="tel" error={profile.fields.phone} hint="Only used to stop a teacher from using their own code." />
+          )}
           <Field label="Email" value={user.email} readOnly disabled hint="Contact support to change the email on your account." />
           {profile.error && !Object.keys(profile.fields).length && <p role="alert" className="text-sm text-ember-700">{profile.error}</p>}
-          <Button type="submit" variant="primary" disabled={profile.busy || profile.values.name.trim() === user.name}>
-            {profile.busy ? 'Saving…' : 'Save name'}
+          <Button type="submit" variant="primary" disabled={profile.busy || (profile.values.name.trim() === user.name && (!teachers || profile.values.phone.trim() === (user.phone ?? '')))}>
+            {profile.busy ? 'Saving…' : 'Save changes'}
           </Button>
         </form>
       </Card>
@@ -226,6 +231,7 @@ function Support() {
 export default function Account() {
   const { user, access, loading, logout, openAuth } = useAuth()
   const toast = useToast()
+  const { referrals } = useFeatures()
   const [tab, setTab] = useState('orders')
 
   if (loading) return <section className="page-container py-20 text-ink-600">Loading your account…</section>
@@ -253,6 +259,11 @@ export default function Account() {
           <Button to={ROUTES.library} variant="accent" icon={BookOpen}>
             My library
           </Button>
+          {referrals && (
+            <Button to="/refer" variant="outline" icon={Gift}>
+              Refer and earn
+            </Button>
+          )}
           <Button variant="outline" onClick={signOut}>
             Sign out
           </Button>
