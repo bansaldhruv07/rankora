@@ -1,10 +1,13 @@
+import { growth, PENDING_ORDER_WINDOW_MS } from '../config/growth.js'
 import { Coupon } from '../models/Coupon.js'
 import { Order } from '../models/Order.js'
 import { badRequest } from '../utils/AppError.js'
+import { availableCredit } from './growth/credit.js'
+import { classifyCode } from './growth/discounts.js'
 
-export const PENDING_WINDOW_MS = 30 * 60 * 1000
-// Razorpay needs a positive amount, so a coupon can never take an order below one rupee.
-const MIN_CHARGE_PAISE = 100
+export const PENDING_WINDOW_MS = PENDING_ORDER_WINDOW_MS
+// Razorpay needs a positive amount, so a discount or store credit can never take an order below one rupee.
+export const MIN_CHARGE_PAISE = 100
 
 // Open redemptions = paid orders plus recent pending ones (someone mid-checkout holds a slot).
 const redemptionFilter = (extra) => ({
@@ -22,6 +25,10 @@ export const MAX_CART_ITEMS = 20
 export const cartPercentFor = (count) => CART_TIERS.find((tier) => count >= tier.min)?.percent ?? 0
 // The next tier up from `count`, so the cart can say "add one more to save 15%".
 export const nextCartTier = (count) => [...CART_TIERS].reverse().find((tier) => tier.min > count) ?? null
+
+// All discounts round DOWN to whole paise, in the customer's disfavour by at most a paisa, and never go below the minimum charge.
+export const percentDiscount = (basePaise, percent) => Math.max(0, Math.min(Math.floor((basePaise * percent) / 100), basePaise - MIN_CHARGE_PAISE))
+export const flatDiscount = (basePaise, paise) => Math.max(0, Math.min(paise, basePaise - MIN_CHARGE_PAISE))
 
 export function discountFor(coupon, listPaise) {
   const raw = coupon.type === 'percent' ? Math.floor((listPaise * coupon.value) / 100) : coupon.value
@@ -55,36 +62,100 @@ export async function resolveCoupon({ code, userId, product, productIds = [produ
   return coupon
 }
 
-// Prices a cart of notes: the volume discount comes off the list total first, then an optional coupon comes off what is left.
-export async function quoteCart({ products, couponCode, userId }) {
+// The one discount source plus optional store credit, applied to `basePaise` (the price after any volume discount).
+// Which source wins is decided in growth/discounts.js; this turns it into rupees.
+async function applySource({ basePaise, productIds, code, user, attribution, useCredit }) {
+  const decision = await classifyCode({ code, user, attribution })
+  let coupon = null
+  let discountPaise = 0
+  let label = null
+
+  if (decision.source === 'coupon') {
+    coupon = await resolveCoupon({ code: decision.code, userId: user?._id, productIds, pricePaise: basePaise })
+    discountPaise = discountFor(coupon, basePaise)
+    label = `Coupon ${coupon.code}`
+  } else if (decision.source === 'teacher') {
+    discountPaise = percentDiscount(basePaise, decision.teacher.discountPercent)
+    label = `Teacher code ${decision.teacher.code}`
+  } else if (decision.source === 'referral') {
+    discountPaise = flatDiscount(basePaise, growth.FRIEND_DISCOUNT)
+    label = 'Friend discount'
+  }
+
+  const afterDiscount = basePaise - discountPaise
+  const creditAvailable = user && growth.referralsEnabled ? await availableCredit(user._id) : 0
+  const creditPaise = useCredit ? Math.min(creditAvailable, Math.max(0, afterDiscount - MIN_CHARGE_PAISE)) : 0
+
+  return {
+    source: decision.source,
+    coupon,
+    teacher: decision.teacher ?? null,
+    referral: decision.referral ?? null,
+    referrer: decision.referrer ?? null,
+    label,
+    notice: decision.notice ?? null,
+    codeDiscountPaise: discountPaise,
+    creditAvailable,
+    creditPaise,
+    totalPaise: afterDiscount - creditPaise,
+  }
+}
+
+// Prices a cart of notes: the volume discount comes off the list total first, then the one discount source, then store credit.
+export async function quoteCart({ products, code, user, attribution, useCredit }) {
   const listPaise = products.reduce((sum, p) => sum + p.pricePaise, 0)
   const volumePercent = cartPercentFor(products.length)
   const volumeDiscountPaise = Math.max(0, Math.min(Math.floor((listPaise * volumePercent) / 100), listPaise - MIN_CHARGE_PAISE))
   const afterVolume = listPaise - volumeDiscountPaise
-  const coupon = couponCode ? await resolveCoupon({ code: couponCode, userId, productIds: products.map((p) => p._id), pricePaise: afterVolume }) : null
-  const couponDiscountPaise = coupon ? discountFor(coupon, afterVolume) : 0
+  const applied = await applySource({ basePaise: afterVolume, productIds: products.map((p) => p._id), code, user, attribution, useCredit })
   return {
-    coupon,
+    ...applied,
     listPaise,
     volumePercent,
     volumeDiscountPaise,
-    couponDiscountPaise,
-    discountPaise: volumeDiscountPaise + couponDiscountPaise,
-    totalPaise: afterVolume - couponDiscountPaise,
+    couponDiscountPaise: applied.codeDiscountPaise,
+    discountPaise: volumeDiscountPaise + applied.codeDiscountPaise,
   }
 }
 
 // The single place a price is decided. Callers never pass amounts in.
-export async function quote({ product, couponCode, userId }) {
+export async function quote({ product, code, user, attribution, useCredit }) {
   const listPaise = product.pricePaise
-  const coupon = couponCode ? await resolveCoupon({ code: couponCode, userId, product }) : null
-  const discountPaise = coupon ? discountFor(coupon, listPaise) : 0
-  return { coupon, listPaise, discountPaise, totalPaise: listPaise - discountPaise }
+  const applied = await applySource({ basePaise: listPaise, productIds: [product._id], code, user, attribution, useCredit })
+  return { ...applied, listPaise, volumeDiscountPaise: 0, discountPaise: applied.codeDiscountPaise }
 }
+
+// The fields of a priced order that are stored on the Order.
+export const growthOrderFields = (priced) => ({
+  couponCode: priced.coupon?.code,
+  discountSource: priced.source,
+  ...(priced.teacher ? { teacherId: priced.teacher._id, teacherCode: priced.teacher.code, commissionPercent: priced.teacher.commissionPercent } : {}),
+  creditPaise: priced.creditPaise,
+})
+
+const publicBreakdown = (q) => ({
+  discountSource: q.source,
+  discountLabel: q.label,
+  notice: q.notice,
+  credit: q.creditPaise / 100,
+  creditAvailable: q.creditAvailable / 100,
+})
 
 export const quoteToPublic = (q) => ({
   list: q.listPaise / 100,
   discount: q.discountPaise / 100,
   total: q.totalPaise / 100,
   couponCode: q.coupon?.code ?? null,
+  ...publicBreakdown(q),
+})
+
+export const cartQuoteToPublic = (q) => ({
+  list: (q?.listPaise ?? 0) / 100,
+  volumePercent: q?.volumePercent ?? 0,
+  volumeDiscount: (q?.volumeDiscountPaise ?? 0) / 100,
+  couponCode: q?.coupon?.code ?? null,
+  couponDiscount: (q?.couponDiscountPaise ?? 0) / 100,
+  discount: (q?.discountPaise ?? 0) / 100,
+  total: (q?.totalPaise ?? 0) / 100,
+  ...(q ? publicBreakdown(q) : { discountSource: 'none', discountLabel: null, notice: null, credit: 0, creditAvailable: 0 }),
 })

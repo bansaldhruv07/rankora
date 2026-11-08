@@ -6,8 +6,12 @@ import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { loadCart } from '../services/cart.js'
 import { hasAccess } from '../services/entitlements.js'
+import { readAttribution } from '../services/growth/attribution.js'
+import { creditBalance, reservedCredit } from '../services/growth/credit.js'
+import { normalizeCode } from '../services/growth/codes.js'
+import { attachReferral } from '../services/growth/referrals.js'
 import { getProvider } from '../services/payments/index.js'
-import { PENDING_WINDOW_MS, quote, quoteCart } from '../services/pricing.js'
+import { PENDING_WINDOW_MS, growthOrderFields, quote, quoteCart } from '../services/pricing.js'
 import { cartItemsSchema } from './cart.js'
 import { badRequest, conflict, notFound } from '../utils/AppError.js'
 import { asyncHandler, assertObjectId, ok, pageMeta, pageParams, parse } from '../utils/http.js'
@@ -21,6 +25,7 @@ const createSchema = z
     product: z.string().trim().regex(/^[a-z0-9-]{1,80}$/).optional(),
     items: cartItemsSchema.optional(),
     coupon: z.string().trim().max(30).optional(),
+    useCredit: z.boolean().optional(),
   })
   .refine((body) => Boolean(body.product) !== Boolean(body.items), { message: 'Send either product or items' })
 
@@ -47,10 +52,34 @@ async function assertNotOwned(userId, product) {
   }
 }
 
+// The friend discount is attached to the account the first time an order uses it, and only one unpaid order
+// at a time may carry it, so two open orders can never both take the discount.
+async function referralFor(user, priced) {
+  if (priced.source !== 'referral') return undefined
+  const referral = priced.referral ?? (await attachReferral(user, priced.referrer))
+  await Order.updateMany({ user: user._id, status: 'pending', discountSource: 'referral' }, { $set: { status: 'cancelled' } })
+  return referral?._id
+}
+
+// Store credit held by unpaid orders may never exceed the balance, even if two checkouts race.
+async function assertCreditHeld(order) {
+  if (!order.creditPaise) return
+  const [balance, held] = await Promise.all([creditBalance(order.user), reservedCredit(order.user)])
+  if (held > balance) {
+    await Order.updateOne({ _id: order._id }, { $set: { status: 'cancelled' } })
+    throw conflict('Your store credit changed. Please try again.')
+  }
+}
+
+// What the student asked for, so a repeated click can reuse the open order before anything is priced again.
+const offerKey = (input, attribution) =>
+  [normalizeCode(input.coupon), input.useCredit ? 'credit' : '', attribution.teacherCode ?? '', attribution.refCode ?? ''].join('|')
+
 // Several notes in one order. Priced here from the database, exactly as the cart quote shows.
-async function createCartOrder(req, res, products, couponInput) {
-  const couponCode = couponInput ? couponInput.toUpperCase() : undefined
-  const priced = await quoteCart({ products, couponCode, userId: req.user._id })
+async function createCartOrder(req, res, products, input) {
+  const attribution = readAttribution(req)
+  const key = offerKey(input, attribution)
+  const listPaise = products.reduce((sum, p) => sum + p.pricePaise, 0)
   const ids = products.map((p) => p._id)
   const window = { $gt: new Date(Date.now() - PENDING_WINDOW_MS) }
 
@@ -60,14 +89,17 @@ async function createCartOrder(req, res, products, couponInput) {
     productKind: 'cart',
     status: 'pending',
     createdAt: window,
-    couponCode: priced.coupon?.code ?? null,
-    amountPaise: priced.totalPaise,
+    listAmountPaise: listPaise,
+    offerKey: key,
     items: { $size: ids.length },
     'items.product': { $all: ids },
   })
   if (existing) return ok(res, { order: existing.toPublic(), checkout: checkoutPayload(existing, req.user) })
 
+  const priced = await quoteCart({ products, code: input.coupon, user: req.user, attribution, useCredit: input.useCredit })
+
   await Order.updateMany({ user: req.user._id, productKind: 'cart', status: 'pending', createdAt: window }, { $set: { status: 'cancelled' } })
+  const referralId = await referralFor(req.user, priced)
   const order = await Order.create({
     user: req.user._id,
     product: products[0]._id,
@@ -77,11 +109,14 @@ async function createCartOrder(req, res, products, couponInput) {
     listAmountPaise: priced.listPaise,
     discountPaise: priced.discountPaise,
     volumeDiscountPaise: priced.volumeDiscountPaise,
-    couponCode: priced.coupon?.code,
+    ...growthOrderFields(priced),
+    offerKey: key,
+    referralId,
     amountPaise: priced.totalPaise,
     currency: products[0].currency,
     provider: getProvider().name,
   })
+  await assertCreditHeld(order)
   const remote = await getProvider().createOrder({ amountPaise: order.amountPaise, currency: order.currency, receipt: String(order._id) })
   order.providerOrderId = remote.id
   await order.save()
@@ -93,7 +128,8 @@ router.post(
   '/',
   paymentLimiter,
   asyncHandler(async (req, res) => {
-    const { product: slugInput, items, coupon: couponInput } = parse(createSchema, req.body)
+    const input = parse(createSchema, req.body)
+    const { product: slugInput, items } = input
     getProvider() // throws 503 when payments are not enabled, before anything is created
 
     let slug = slugInput
@@ -103,7 +139,7 @@ router.post(
       if (cart.products.length === 0) {
         throw cart.owned.length ? conflict('You already have access to everything in this cart') : notFound('These notes are not available')
       }
-      if (cart.products.length > 1) return createCartOrder(req, res, cart.products, couponInput)
+      if (cart.products.length > 1) return createCartOrder(req, res, cart.products, input)
       slug = cart.products[0].slug
     }
 
@@ -112,16 +148,18 @@ router.post(
     if (product.pricePaise <= 0) throw badRequest('This product is free and cannot be purchased')
     await assertNotOwned(req.user._id, product)
 
-    const couponCode = couponInput ? couponInput.toUpperCase() : undefined
+    const attribution = readAttribution(req)
+    const key = offerKey(input, attribution)
     const open = { user: req.user._id, product: product._id, productKind: product.kind, status: 'pending', createdAt: { $gt: new Date(Date.now() - PENDING_WINDOW_MS) } }
 
     // Repeated clicks / retries reuse the identical open order instead of creating duplicates.
-    const existing = await Order.findOne({ ...open, listAmountPaise: product.pricePaise, couponCode: couponCode ?? null })
+    const existing = await Order.findOne({ ...open, listAmountPaise: product.pricePaise, offerKey: key })
     if (existing) return ok(res, { order: existing.toPublic(), checkout: checkoutPayload(existing, req.user) })
 
-    const priced = await quote({ product, couponCode, userId: req.user._id })
-    // Any other open order for this item (different coupon or an old price) is superseded.
+    const priced = await quote({ product, code: input.coupon, user: req.user, attribution, useCredit: input.useCredit })
+    // Any other open order for this item (different code or an old price) is superseded.
     await Order.updateMany(open, { $set: { status: 'cancelled' } })
+    const referralId = await referralFor(req.user, priced)
 
     const order = await Order.create({
       user: req.user._id,
@@ -132,11 +170,14 @@ router.post(
       planDays: product.planDays,
       listAmountPaise: priced.listPaise,
       discountPaise: priced.discountPaise,
-      couponCode: priced.coupon?.code,
+      ...growthOrderFields(priced),
+      offerKey: key,
+      referralId,
       amountPaise: priced.totalPaise,
       currency: product.currency,
       provider: getProvider().name,
     })
+    await assertCreditHeld(order)
     const remote = await getProvider().createOrder({
       amountPaise: order.amountPaise,
       currency: order.currency,

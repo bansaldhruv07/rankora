@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { optionalAuth } from '../middleware/auth.js'
 import { Product } from '../models/Product.js'
 import { quote, quoteToPublic } from '../services/pricing.js'
+import { readAttribution } from '../services/growth/attribution.js'
 import { getObject } from '../services/storage.js'
 import { notFound } from '../utils/AppError.js'
 import { asyncHandler, escapeRegex, ok, pageMeta, pageParams, parse } from '../utils/http.js'
@@ -109,8 +110,8 @@ router.post(
     const slug = slugParam.safeParse(req.params.slug)
     const product = slug.success ? await Product.findOne({ slug: slug.data, status: 'published' }) : null
     if (!product) throw notFound('Product not found')
-    const { coupon } = parse(z.object({ coupon: z.string().trim().max(30).optional() }), req.body ?? {})
-    const q = await quote({ product, couponCode: coupon, userId: req.user?._id })
+    const { coupon, useCredit } = parse(z.object({ coupon: z.string().trim().max(30).optional(), useCredit: z.boolean().optional() }), req.body ?? {})
+    const q = await quote({ product, code: coupon, user: req.user, attribution: readAttribution(req), useCredit })
     ok(res, quoteToPublic(q))
   }),
 )
