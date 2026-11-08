@@ -6,7 +6,6 @@ import { useApi } from '../../hooks/useApi'
 import { useDaysToExam } from '../../hooks/useDaysToExam'
 import { useSampleLink } from '../../hooks/useSampleLink'
 import { SITE, isLink } from '../../data/site'
-import { formatPrice } from '../../utils/format'
 import { ROUTES, notePath } from '../../utils/routes'
 import { cn } from '../../utils/cn'
 import { AtomArt, BulbArt, PencilArt, SparkleArt } from '../common/Clipart'
@@ -81,7 +80,7 @@ function FounderPill() {
   )
 }
 
-// The three subject packs as a fanned stack of posters. Each opens its pack; the live price comes from the catalogue.
+// The three subject packs as a fanned stack of posters. Each opens its pack (prices live on Notes and Pricing).
 function PosterFan() {
   const { data: bundles } = useApi('/products?kind=bundle&limit=20')
   const bySlug = new Map((bundles ?? []).map((bundle) => [bundle.slug, bundle]))
@@ -93,7 +92,7 @@ function PosterFan() {
           <Link
             key={poster.slug}
             to={bundle ? notePath(poster.slug) : ROUTES.notes}
-            aria-label={bundle ? `${bundle.title}, ${bundle.price ? formatPrice(bundle.price) : 'see what is inside'}` : poster.alt}
+            aria-label={bundle ? `${bundle.title}: see what is inside` : poster.alt}
             className={cn(
               'hero-float group absolute top-1/2 w-[37%] -translate-y-1/2 overflow-hidden rounded-xl border border-line bg-ivory-200 shadow-lift transition-[rotate,scale,box-shadow] duration-500 hover:z-20 hover:shadow-[0_24px_50px_-12px_rgba(11,20,36,0.45)]',
               poster.place,
@@ -101,11 +100,6 @@ function PosterFan() {
             style={{ '--d': `${poster.delay}ms` }}
           >
             <img src={poster.image} alt={poster.alt} width="900" height="1125" fetchPriority="high" className="block aspect-[4/5] w-full object-cover" />
-            {bundle?.price ? (
-              <span className="absolute bottom-2 left-2 rounded-full bg-[#0b1424]/85 px-2.5 py-1 font-mono text-[0.7rem] font-bold text-white ring-1 ring-white/20 backdrop-blur-sm">
-                {formatPrice(bundle.price)}
-              </span>
-            ) : null}
           </Link>
         )
       })}
