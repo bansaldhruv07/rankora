@@ -1,29 +1,117 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, BookOpen, Check, Timer } from 'lucide-react'
-import Badge, { SubjectBadge } from '../ui/Badge'
+import { ArrowRight, ArrowUpRight, BookOpen, Check, Timer } from 'lucide-react'
 import Button from '../ui/Button'
-import ProgressBar from '../ui/ProgressBar'
-import { AtomArt, BulbArt, PencilArt, SparkleArt } from '../common/Clipart'
+import { useApi } from '../../hooks/useApi'
 import { useDaysToExam } from '../../hooks/useDaysToExam'
 import { useSampleLink } from '../../hooks/useSampleLink'
-import { SITE } from '../../data/site'
-import { ROUTES } from '../../utils/routes'
+import { SITE, isLink } from '../../data/site'
+import { formatPrice } from '../../utils/format'
+import { ROUTES, notePath } from '../../utils/routes'
 import { cn } from '../../utils/cn'
+import { AtomArt, BulbArt, PencilArt, SparkleArt } from '../common/Clipart'
 
 const HIGHLIGHTS = ['Physics, Chemistry, Maths', 'Class 11 and 12', 'Free sample', 'Instant access']
 
-// An illustration of the reader: where a student is in a chapter plan.
-const PLAN = [
-  { name: 'Kinematics', state: 'done' },
-  { name: 'Laws of Motion', state: 'now' },
-  { name: 'Work, Energy and Power', state: 'next' },
+// The three complete-subject packs, shown as their posters. Left to right: Physics, Chemistry, Maths.
+const POSTERS = [
+  { slug: 'physics-complete', image: '/bundles/physics.webp', alt: 'Complete Physics: short handwritten notes, Class 11 and 12', place: 'left-0 -rotate-6 hover:-rotate-2', delay: 260 },
+  { slug: 'chemistry-complete', image: '/bundles/chemistry.webp', alt: 'Complete Chemistry: short handwritten notes, Class 11 and 12', place: 'left-[31.5%] z-10 scale-[1.08] hover:scale-[1.14]', delay: 380 },
+  { slug: 'mathematics-complete', image: '/bundles/mathematics.webp', alt: 'Complete Maths: short handwritten notes, Class 11 and 12', place: 'right-0 rotate-6 hover:rotate-2', delay: 320 },
 ]
 
 const RULED =
   'repeating-linear-gradient(to bottom, transparent 0, transparent 31px, color-mix(in srgb, var(--color-ink-900) 5%, transparent) 31px, color-mix(in srgb, var(--color-ink-900) 5%, transparent) 32px)'
-const NOTE_RULED =
-  'repeating-linear-gradient(to bottom, transparent 0, transparent 35px, color-mix(in srgb, var(--color-ink-500) 22%, transparent) 35px, color-mix(in srgb, var(--color-ink-500) 22%, transparent) 36px)'
 const FADE = 'linear-gradient(to bottom, black, transparent 85%)'
+
+const initials = (name) => name.split(' ').map((word) => word[0]).join('').slice(0, 2).toUpperCase()
+
+// A round founder photo that opens their LinkedIn. Falls back to initials until the photo file exists.
+function FounderDot({ founder, className }) {
+  const [failed, setFailed] = useState(false)
+  const frame = 'size-9 rounded-full ring-2 ring-surface transition duration-300 group-hover/dot:z-10 group-hover/dot:scale-110'
+  const face =
+    founder.photo && !failed ? (
+      <img src={founder.photo} alt="" width="36" height="36" onError={() => setFailed(true)} className={cn(frame, 'object-cover object-top')} />
+    ) : (
+      <span className={cn(frame, 'grid place-items-center bg-ember-50 font-mono text-[0.7rem] font-bold text-ember-700')}>{initials(founder.name)}</span>
+    )
+  if (!isLink(founder.linkedin)) return <span className={cn('relative', className)}>{face}</span>
+  return (
+    <a
+      href={founder.linkedin}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${founder.name} on LinkedIn`}
+      title={founder.name}
+      className={cn('group/dot relative rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-500', className)}
+    >
+      {face}
+    </a>
+  )
+}
+
+// "Made and used by IIT Delhi student", with the founders' photos and a way through to LinkedIn.
+function FounderPill() {
+  const founders = SITE.founders
+  // The line credits the IIT Delhi student, so the arrow goes to her profile.
+  const maker = founders.find((f) => f.college === 'iitd' && isLink(f.linkedin))
+  return (
+    <div className="inline-flex max-w-full items-center gap-3 rounded-full border border-ember-500/30 bg-surface py-1 pl-1 pr-1 shadow-soft">
+      <span className="flex shrink-0 -space-x-2.5">
+        {founders.map((founder) => (
+          <FounderDot key={founder.id} founder={founder} />
+        ))}
+      </span>
+      <span className="min-w-0 text-sm font-semibold leading-tight text-ink-900">
+        Made and used by <span className="marker">IIT Delhi</span> student
+      </span>
+      {maker && (
+        <a
+          href={maker.linkedin}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${maker.name} on LinkedIn`}
+          className="group grid size-9 shrink-0 place-items-center rounded-full bg-ember-500 text-white transition hover:brightness-110"
+        >
+          <ArrowUpRight size={17} aria-hidden="true" className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+        </a>
+      )}
+    </div>
+  )
+}
+
+// The three subject packs as a fanned stack of posters. Each opens its pack; the live price comes from the catalogue.
+function PosterFan() {
+  const { data: bundles } = useApi('/products?kind=bundle&limit=20')
+  const bySlug = new Map((bundles ?? []).map((bundle) => [bundle.slug, bundle]))
+  return (
+    <div className="relative mx-auto aspect-[1/0.64] w-full max-w-md lg:max-w-none">
+      {POSTERS.map((poster) => {
+        const bundle = bySlug.get(poster.slug)
+        return (
+          <Link
+            key={poster.slug}
+            to={bundle ? notePath(poster.slug) : ROUTES.notes}
+            aria-label={bundle ? `${bundle.title}, ${bundle.price ? formatPrice(bundle.price) : 'see what is inside'}` : poster.alt}
+            className={cn(
+              'hero-float group absolute top-1/2 w-[37%] -translate-y-1/2 overflow-hidden rounded-xl border border-line bg-ivory-200 shadow-lift transition-[rotate,scale,box-shadow] duration-500 hover:z-20 hover:shadow-[0_24px_50px_-12px_rgba(11,20,36,0.45)]',
+              poster.place,
+            )}
+            style={{ '--d': `${poster.delay}ms` }}
+          >
+            <img src={poster.image} alt={poster.alt} width="900" height="1125" fetchPriority="high" className="block aspect-[4/5] w-full object-cover" />
+            {bundle?.price ? (
+              <span className="absolute bottom-2 left-2 rounded-full bg-[#0b1424]/85 px-2.5 py-1 font-mono text-[0.7rem] font-bold text-white ring-1 ring-white/20 backdrop-blur-sm">
+                {formatPrice(bundle.price)}
+              </span>
+            ) : null}
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function Hero() {
   const sampleTo = useSampleLink()
@@ -40,13 +128,8 @@ export default function Hero() {
 
       <div className="page-container relative grid items-center gap-12 py-12 sm:py-16 lg:grid-cols-[1.05fr_1fr] lg:py-20">
         <div>
-          <div className="animate-rise mb-6 flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center gap-3 rounded-full border border-ember-500/30 bg-surface py-1.5 pl-1.5 pr-5 shadow-soft">
-              <span className="grid h-8 place-items-center rounded-full bg-ember-500 px-3 font-mono text-xs font-bold tracking-[0.16em] text-white">IITD</span>
-              <span className="text-sm font-semibold text-ink-900 sm:text-base">
-                Made and used by an <span className="marker">IIT Delhi</span> student
-              </span>
-            </div>
+          <div className="animate-rise mb-4 flex flex-wrap items-center gap-3">
+            <FounderPill />
             {days && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-ember-50 px-3.5 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-ember-700 ring-1 ring-ember-500/30">
                 <Timer size={13} aria-hidden="true" />
@@ -55,7 +138,7 @@ export default function Hero() {
             )}
           </div>
 
-          <h1 className="animate-rise stagger text-5xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl" style={{ '--d': '70ms' }}>
+          <h1 className="animate-rise stagger text-5xl font-semibold leading-[1.05] sm:text-5xl lg:text-6xl" style={{ '--d': '70ms' }}>
             Revise a chapter in{' '}
             <span className="relative whitespace-nowrap text-ember-600">
               <span className="relative">minutes.</span>
@@ -66,87 +149,30 @@ export default function Hero() {
               />
             </span>
           </h1>
-          <p className="animate-rise stagger mt-5 max-w-xl text-lg leading-relaxed text-ink-600 sm:text-xl" style={{ '--d': '150ms' }}>
+          <p className="animate-rise stagger mt-4 max-w-xl text-base leading-relaxed text-ink-600 sm:text-lg" style={{ '--d': '150ms' }}>
             Cover an entire subject before JEE, one short chapter at a time. Nothing important left out.
           </p>
 
-          <div className="animate-rise stagger mt-8 flex flex-wrap gap-3" style={{ '--d': '230ms' }}>
-            <Button to={ROUTES.notes} variant="accent" size="lg" iconRight={ArrowRight}>
+          <div className="animate-rise stagger mt-6 flex flex-wrap gap-3" style={{ '--d': '230ms' }}>
+            <Button to={ROUTES.notes} variant="accent" size="md" iconRight={ArrowRight}>
               Browse the notes
             </Button>
-            <Button to={sampleTo} variant="outline" size="lg" icon={BookOpen}>
+            <Button to={sampleTo} variant="outline" size="md" icon={BookOpen}>
               See a free sample
             </Button>
           </div>
 
-          <ul className="animate-rise stagger mt-8 flex flex-wrap gap-x-6 gap-y-2.5 text-sm text-ink-700" style={{ '--d': '310ms' }}>
+          <ul className="animate-rise stagger mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[0.82rem] text-ink-700" style={{ '--d': '310ms' }}>
             {HIGHLIGHTS.map((item) => (
               <li key={item} className="flex items-center gap-2">
-                <Check size={16} aria-hidden="true" className="text-sage-600" />
+                <Check size={14} aria-hidden="true" className="text-sage-600" />
                 {item}
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="flex flex-col gap-5 lg:relative lg:block lg:h-[40rem] xl:h-[33rem]">
-          <article
-            className="hero-float relative rounded-2xl border border-line bg-surface p-5 pt-6 shadow-lift transition-[rotate] duration-500 hover:rotate-0 lg:absolute lg:left-0 lg:top-2 lg:w-[16.5rem] lg:-rotate-2 xl:w-[18.5rem]"
-            style={{ '--d': '260ms', backgroundImage: NOTE_RULED, backgroundPositionY: '2.9rem' }}
-          >
-            <div className="flex items-center justify-between">
-              <SubjectBadge subject="physics" />
-              <Badge tone="ember">Sample page</Badge>
-            </div>
-            <p className="mt-4 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-500">Laws of Motion · Notes</p>
-            <p className="mt-2 font-hand text-[1.5rem] leading-[36px] text-ink-800">Draw the free-body diagram. Then write the equation.</p>
-            <p className="font-hand text-[1.5rem] leading-[36px] text-ember-600">Most lost marks are sign errors.</p>
-            <Link to={sampleTo} className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ember-600 underline-offset-4 hover:underline">
-              Read a free sample
-              <ArrowRight size={14} aria-hidden="true" />
-            </Link>
-          </article>
-
-          <article
-            className="hero-float rounded-2xl border border-line bg-surface p-5 shadow-lift transition-[rotate] duration-500 hover:rotate-0 lg:absolute lg:bottom-0 lg:right-0 lg:z-10 lg:w-[16.5rem] lg:rotate-2 xl:w-[19rem]"
-            style={{ '--d': '380ms' }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-                <BookOpen size={16} aria-hidden="true" className="text-ember-600" />
-                Continue reading
-              </p>
-              <Badge tone="sage">Preview</Badge>
-            </div>
-            <p className="mt-4 font-display text-lg font-semibold leading-snug">Laws of Motion</p>
-            <ProgressBar value={7} max={14} size="sm" className="mt-3" />
-            <p className="mt-1.5 text-xs text-ink-500">Page 7 of 14. Resumes where you left.</p>
-            <ul className="mt-4 space-y-2">
-              {PLAN.map(({ name, state }) => (
-                <li
-                  key={name}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg border px-3 py-2 text-sm',
-                    state === 'now' ? 'border-ember-500/50 bg-ember-50 font-medium text-ink-900' : 'border-line-soft text-ink-600',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'grid size-5 shrink-0 place-items-center rounded-full text-white',
-                      state === 'done' ? 'bg-sage-500' : state === 'now' ? 'bg-ember-500' : 'border border-line bg-transparent',
-                    )}
-                  >
-                    {state === 'done' && <Check size={12} aria-hidden="true" />}
-                  </span>
-                  {name}
-                  <span className="ml-auto font-mono text-[0.65rem] uppercase tracking-wide text-ink-400">
-                    {state === 'done' ? 'Done' : state === 'now' ? 'Reading' : 'Next'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </article>
-        </div>
+        <PosterFan />
       </div>
     </section>
   )
