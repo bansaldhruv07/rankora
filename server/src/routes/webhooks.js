@@ -3,6 +3,7 @@ import { Order } from '../models/Order.js'
 import { Payment } from '../models/Payment.js'
 import { WebhookEvent } from '../models/WebhookEvent.js'
 import { getProvider } from '../services/payments/index.js'
+import { onSaleConfirmed } from '../services/growth/sales.js'
 import { applyRefund, markFailed, settlePaid } from '../services/settlement.js'
 import { asyncHandler } from '../utils/http.js'
 import { logger } from '../utils/logger.js'
@@ -20,12 +21,15 @@ async function handleEvent(event) {
       if (!providerOrderId || !paymentId) return
       const order = await Order.findOne({ providerOrderId })
       if (!order) return logger.warn('webhook for unknown order')
-      await settlePaid(order, {
+      const settled = await settlePaid(order, {
         paymentId,
         amountPaise: Number(payment.amount),
         currency: payment.currency ?? order.currency,
         source: 'webhook',
       })
+      // Teacher commissions and referral rewards count only from here: the signature-verified webhook is the
+      // confirmation. A replayed webhook is harmless because every step below is idempotent.
+      if (settled.granted) await onSaleConfirmed(order._id)
       return
     }
     case 'payment.failed': {

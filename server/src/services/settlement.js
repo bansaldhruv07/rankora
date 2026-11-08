@@ -1,6 +1,8 @@
 import { Order } from '../models/Order.js'
 import { Payment } from '../models/Payment.js'
 import { grantForOrder, revokeForOrder } from './entitlements.js'
+import { commitSpend } from './growth/credit.js'
+import { onOrderRefunded } from './growth/sales.js'
 import { logger } from '../utils/logger.js'
 
 // Every step is idempotent, so a retried webhook or a verify + webhook race is safe.
@@ -34,6 +36,8 @@ export async function settlePaid(order, { paymentId, amountPaise, currency = 'IN
     { _id: order._id, status: { $in: ['pending', 'failed', 'cancelled'] } },
     { $set: { status: 'paid', paidAt: new Date() } },
   )
+  // Store credit used on the order leaves the balance for good (idempotent: one entry per order).
+  await commitSpend(order)
   return { granted: true }
 }
 
@@ -60,6 +64,8 @@ export async function applyRefund({ payment, refundId, amountPaise, reason }) {
       { $set: { status: 'refunded', refundedAt: new Date(), refundReason: reason } },
     )
     await revokeForOrder(updated.order, reason || 'refunded')
+    // Teacher commission, referral reward and any store credit used on this order are reversed.
+    await onOrderRefunded(updated.order)
   }
   return { duplicate: false, full }
 }
