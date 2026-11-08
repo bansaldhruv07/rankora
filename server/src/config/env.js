@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { fileURLToPath } from 'node:url'
+import { growthProblems } from './growth.js'
 
 const isTest = process.env.NODE_ENV === 'test'
 const isProd = process.env.NODE_ENV === 'production'
@@ -63,5 +64,6 @@ export function assertEnv() {
     if (!env.razorpay.webhookSecret) problems.push('RAZORPAY_WEBHOOK_SECRET is required')
   }
   if (isProd && !env.frontendOrigin.startsWith('https://')) problems.push('FRONTEND_ORIGIN must be https in production')
+  problems.push(...growthProblems())
   if (problems.length) throw new Error(`Invalid configuration:\n - ${problems.join('\n - ')}`)
 }

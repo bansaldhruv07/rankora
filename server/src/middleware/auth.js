@@ -9,7 +9,7 @@ export const ADMIN_COOKIE_NAME = 'rk_admin'
 
 // Staff roles and what each may do. Roles live only in the database and are never read from a request.
 export const PERMISSIONS = {
-  admin: ['content', 'pricing', 'orders', 'refund', 'users', 'audit', 'support'],
+  admin: ['content', 'pricing', 'orders', 'refund', 'users', 'audit', 'support', 'growth'],
   editor: ['content', 'support'],
 }
 
