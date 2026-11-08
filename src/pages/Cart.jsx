@@ -1,82 +1,55 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Check, Info, ShoppingBag, Tag, Trash2, X } from 'lucide-react'
+import { BookOpen, Check, Info, ShoppingBag, Tag, Trash2 } from 'lucide-react'
+import OfferBox from '../components/pricing/OfferBox'
 import ProductCover from '../components/store/ProductCover'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
+import { useLiveQuote } from '../hooks/useLiveQuote'
 import { useToast } from '../hooks/useToast'
-import { api } from '../lib/api'
 import { payOrder } from '../lib/checkout'
 import { CLASS_LABELS, formatPrice, pluralize } from '../utils/format'
 import { ROUTES, notePath } from '../utils/routes'
-
-const INPUT = 'h-11 min-w-0 flex-1 rounded-xl border border-line bg-surface px-4 text-sm uppercase tracking-wide focus:border-ember-500 focus:outline-none focus:ring-4 focus:ring-ember-500/15'
 
 export default function Cart() {
   const { user, loading: authLoading, openAuth, refresh } = useAuth()
   const { slugs, remove } = useCart()
   const toast = useToast()
-  const [quote, setQuote] = useState(null)
-  const [loadError, setLoadError] = useState('')
-  const [couponInput, setCouponInput] = useState('')
-  const [coupon, setCoupon] = useState('')
-  const [couponError, setCouponError] = useState('')
   const [phase, setPhase] = useState('idle') // idle | working | done
   const [error, setError] = useState('')
   const [sandbox, setSandbox] = useState(false)
   const [bought, setBought] = useState(null)
 
-  // The server prices the cart (ownership, volume discount, coupon). This only displays its answer.
-  useEffect(() => {
-    if (!slugs.length) return undefined
-    let active = true
-    api('/cart/quote', { method: 'POST', body: { items: slugs, ...(coupon ? { coupon } : {}) } })
-      .then(({ data }) => {
-        if (!active) return
-        setQuote(data)
-        setLoadError('')
-        const gone = [...data.owned, ...data.unavailable]
-        if (gone.length) {
-          remove(...gone)
-          toast({
-            title: data.owned.length ? 'Some notes are already yours' : 'Some notes are no longer for sale',
-            description: `${pluralize(gone.length, 'note')} taken out of your cart.`,
-            tone: 'info',
-          })
-        }
-      })
-      .catch((err) => {
-        if (!active) return
-        if (coupon) {
-          setCouponError(err.message)
-          setCoupon('')
-        } else setLoadError(err.message)
-      })
-    return () => {
-      active = false
-    }
-  }, [slugs, coupon, user?.id, remove, toast])
+  // The server prices the cart (ownership, volume discount, the one discount code, store credit). This only displays
+  // its answer, and a typed code is checked as the student types.
+  const live = useLiveQuote({ path: '/cart/quote', base: { items: slugs }, enabled: slugs.length > 0, refreshKey: user?.id })
+  const quote = live.quote
+  const loadError = !quote && live.failure ? live.failure.message : ''
 
-  const applyCoupon = (event) => {
-    event.preventDefault()
-    setCouponError('')
-    setCoupon(couponInput.trim())
-  }
-  const removeCoupon = () => {
-    setCoupon('')
-    setCouponInput('')
-    setCouponError('')
-  }
+  // Notes the student already owns, or that went off sale, are taken out of the cart once the server says so.
+  const handled = useRef(null)
+  useEffect(() => {
+    if (!quote || handled.current === quote) return
+    handled.current = quote
+    const gone = [...quote.owned, ...quote.unavailable]
+    if (!gone.length) return
+    remove(...gone)
+    toast({
+      title: quote.owned.length ? 'Some notes are already yours' : 'Some notes are no longer for sale',
+      description: `${pluralize(gone.length, 'note')} taken out of your cart.`,
+      tone: 'info',
+    })
+  }, [quote, remove, toast])
 
   const pay = async () => {
     if (!user) return openAuth('login')
     setPhase('working')
     setError('')
     try {
-      await payOrder({ items: slugs, ...(quote.couponCode ? { coupon: quote.couponCode } : {}) }, pluralize(quote.count, 'note'), {
+      await payOrder({ items: slugs, ...(live.appliedCode ? { coupon: live.appliedCode } : {}), ...(live.useCredit ? { useCredit: true } : {}) }, pluralize(quote.count, 'note'), {
         onCheckout: (checkout) => setSandbox(checkout.provider === 'mock'),
       })
       const summary = { count: quote.count, total: quote.total }
@@ -206,8 +179,14 @@ export default function Cart() {
               )}
               {quote?.couponDiscount > 0 && (
                 <div className="flex justify-between gap-4 text-sage-700">
-                  <dt>Coupon {quote.couponCode}</dt>
+                  <dt>{quote.discountLabel ?? 'Discount'}</dt>
                   <dd className="tabular font-semibold">− {formatPrice(quote.couponDiscount)}</dd>
+                </div>
+              )}
+              {quote?.credit > 0 && (
+                <div className="flex justify-between gap-4 text-sage-700">
+                  <dt>Store credit</dt>
+                  <dd className="tabular font-semibold">− {formatPrice(quote.credit)}</dd>
                 </div>
               )}
               <div className="flex items-baseline justify-between gap-4 border-t border-line pt-4">
@@ -216,34 +195,7 @@ export default function Cart() {
               </div>
             </dl>
 
-            {quote?.couponCode ? (
-              <p className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-sage-50 px-4 py-2.5 text-sm text-sage-700">
-                <span className="inline-flex items-center gap-2 font-medium">
-                  <Tag size={14} aria-hidden="true" />
-                  {quote.couponCode} applied
-                </span>
-                <button type="button" onClick={removeCoupon} aria-label="Remove coupon" className="grid size-7 place-items-center rounded-full hover:bg-sage-100">
-                  <X size={14} aria-hidden="true" />
-                </button>
-              </p>
-            ) : (
-              <form onSubmit={applyCoupon} className="mt-4">
-                <label htmlFor="cart-coupon" className="sr-only">
-                  Coupon code
-                </label>
-                <div className="flex gap-2">
-                  <input id="cart-coupon" value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} placeholder="Coupon code" autoComplete="off" maxLength={30} className={INPUT} />
-                  <Button type="submit" variant="outline" disabled={!couponInput.trim() || !quote}>
-                    Apply
-                  </Button>
-                </div>
-                {couponError && (
-                  <p role="alert" className="mt-2 text-sm text-ember-700">
-                    {couponError}
-                  </p>
-                )}
-              </form>
-            )}
+            <OfferBox live={live} className="mt-4" />
 
             {error && (
               <p role="alert" className="mt-4 rounded-xl bg-ember-50 px-4 py-3 text-sm text-ember-700">
@@ -251,7 +203,7 @@ export default function Cart() {
               </p>
             )}
 
-            <Button variant="accent" size="lg" className="mt-5 w-full" onClick={pay} disabled={!quote || quote.count === 0 || phase === 'working' || authLoading}>
+            <Button variant="accent" size="lg" className="mt-5 w-full" onClick={pay} disabled={!quote || quote.count === 0 || phase === 'working' || authLoading || live.status === 'checking'}>
               {phase === 'working' ? 'Processing…' : !user ? 'Sign in to check out' : quote ? `Pay ${formatPrice(quote.total)}` : 'Pay'}
             </Button>
 

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { BookOpen, Check, Info, ShieldCheck, Smartphone, Tag, X } from 'lucide-react'
+import { useState } from 'react'
+import { BookOpen, Check, Info, ShieldCheck, Smartphone } from 'lucide-react'
 import Button from '../ui/Button'
 import Modal from '../ui/Modal'
+import OfferBox from './OfferBox'
 import { useAuth } from '../../hooks/useAuth'
-import { api } from '../../lib/api'
+import { useLiveQuote } from '../../hooks/useLiveQuote'
 import { payOrder } from '../../lib/checkout'
 import { formatPrice } from '../../utils/format'
 import { ROUTES, readPath } from '../../utils/routes'
@@ -13,48 +14,22 @@ import { ROUTES, readPath } from '../../utils/routes'
 // what is charged.
 export default function CheckoutModal({ open, onClose, slug, title, fallbackAmount, details = [], kind = 'note', itemCount, onPurchased }) {
   const { user, loading, openAuth, refresh } = useAuth()
-  const [quote, setQuote] = useState({ list: fallbackAmount, discount: 0, total: fallbackAmount, couponCode: null })
-  const [couponOpen, setCouponOpen] = useState(false)
-  const [couponInput, setCouponInput] = useState('')
-  const [couponError, setCouponError] = useState('')
   const [phase, setPhase] = useState('idle') // idle | working | done
   const [error, setError] = useState('')
   const [sandbox, setSandbox] = useState(false)
 
-  // The live price (not the page's cached copy) is what the student is shown before paying.
-  useEffect(() => {
-    if (!open) return undefined
-    let active = true
-    api(`/products/${encodeURIComponent(slug)}/quote`, { method: 'POST', body: {} })
-      .then((json) => active && setQuote(json.data))
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [open, slug])
-
-  const applyCoupon = async (event) => {
-    event.preventDefault()
-    setCouponError('')
-    try {
-      const { data } = await api(`/products/${encodeURIComponent(slug)}/quote`, { method: 'POST', body: { coupon: couponInput } })
-      setQuote(data)
-    } catch (err) {
-      setCouponError(err.message)
-    }
-  }
-  const removeCoupon = async () => {
-    setCouponInput('')
-    setCouponError('')
-    const { data } = await api(`/products/${encodeURIComponent(slug)}/quote`, { method: 'POST', body: {} })
-    setQuote(data)
-  }
+  // The live price (not the page's cached copy) is what the student is shown before paying. A code typed here is
+  // checked as they type; the server prices the order again when it is created.
+  const live = useLiveQuote({ path: `/products/${encodeURIComponent(slug)}/quote`, base: {}, enabled: open && Boolean(user), refreshKey: user?.id })
+  const quote = live.quote ?? { list: fallbackAmount, discount: 0, total: fallbackAmount, credit: 0, discountLabel: null }
 
   const pay = async () => {
     setPhase('working')
     setError('')
     try {
-      await payOrder({ product: slug, ...(quote.couponCode ? { coupon: quote.couponCode } : {}) }, title, { onCheckout: (checkout) => setSandbox(checkout.provider === 'mock') })
+      await payOrder({ product: slug, ...(live.appliedCode ? { coupon: live.appliedCode } : {}), ...(live.useCredit ? { useCredit: true } : {}) }, title, {
+        onCheckout: (checkout) => setSandbox(checkout.provider === 'mock'),
+      })
       await refresh()
       setPhase('done')
       onPurchased?.()
@@ -126,7 +101,8 @@ export default function CheckoutModal({ open, onClose, slug, title, fallbackAmou
   }
 
   const rows = [['Item', title], ...(itemCount ? [['Includes', `${itemCount} notes`]] : []), ...details, ['Price', formatPrice(quote.list)]]
-  if (quote.discount > 0) rows.push([`Coupon ${quote.couponCode}`, `− ${formatPrice(quote.discount)}`])
+  if (quote.discount > 0) rows.push([quote.discountLabel ?? 'Discount', `− ${formatPrice(quote.discount)}`])
+  if (quote.credit > 0) rows.push(['Store credit', `− ${formatPrice(quote.credit)}`])
 
   return (
     <Modal
@@ -139,7 +115,7 @@ export default function CheckoutModal({ open, onClose, slug, title, fallbackAmou
           <Button variant="outline" onClick={onClose} disabled={phase === 'working'}>
             Cancel
           </Button>
-          <Button variant="accent" onClick={pay} disabled={phase === 'working'}>
+          <Button variant="accent" onClick={pay} disabled={phase === 'working' || live.loading || live.status === 'checking'}>
             {phase === 'working' ? 'Processing…' : `Pay ${formatPrice(quote.total)}`}
           </Button>
         </>
@@ -158,47 +134,7 @@ export default function CheckoutModal({ open, onClose, slug, title, fallbackAmou
         </div>
       </dl>
 
-      {quote.couponCode ? (
-        <p className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-sage-50 px-4 py-2.5 text-sm text-sage-700">
-          <span className="inline-flex items-center gap-2 font-medium">
-            <Tag size={14} aria-hidden="true" />
-            {quote.couponCode} applied
-          </span>
-          <button type="button" onClick={removeCoupon} aria-label="Remove coupon" className="grid size-7 place-items-center rounded-full hover:bg-sage-100">
-            <X size={14} aria-hidden="true" />
-          </button>
-        </p>
-      ) : couponOpen ? (
-        <form onSubmit={applyCoupon} className="mt-3">
-          <label htmlFor="coupon" className="sr-only">
-            Coupon code
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="coupon"
-              value={couponInput}
-              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-              placeholder="Coupon code"
-              autoCapitalize="characters"
-              autoComplete="off"
-              maxLength={30}
-              className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-surface px-4 text-sm uppercase tracking-wide focus:border-ember-500 focus:outline-none focus:ring-4 focus:ring-ember-500/15"
-            />
-            <Button type="submit" variant="outline" disabled={!couponInput.trim()}>
-              Apply
-            </Button>
-          </div>
-          {couponError && (
-            <p role="alert" className="mt-2 text-sm text-ember-700">
-              {couponError}
-            </p>
-          )}
-        </form>
-      ) : (
-        <button type="button" onClick={() => setCouponOpen(true)} className="mt-3 text-sm font-semibold text-ember-600 underline-offset-4 hover:underline">
-          Have a coupon code?
-        </button>
-      )}
+      <OfferBox live={live} className="mt-4" />
 
       {error && (
         <p role="alert" className="mt-4 rounded-xl bg-ember-50 px-4 py-3 text-sm text-ember-700">
