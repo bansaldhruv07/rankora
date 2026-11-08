@@ -1,10 +1,11 @@
 import { lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom'
-import { Activity, BarChart3, FileText, LifeBuoy, LogOut, Menu, ReceiptText, Tag, Users, X } from 'lucide-react'
+import { Activity, BarChart3, FileText, GraduationCap, LifeBuoy, LogOut, Menu, ReceiptText, Tag, Users, X } from 'lucide-react'
 import { LogoMark } from '../../components/common/Logo'
 import Button from '../../components/ui/Button'
 import { api } from '../../lib/api'
 import { cn } from '../../utils/cn'
+import { useFeatures } from '../../hooks/useFeatures'
 import { useLightOnly } from '../../hooks/useTheme'
 import { AdminContext, useAdmin } from './adminContext'
 import AdminLogin from './AdminLogin'
@@ -18,6 +19,8 @@ const OrdersAdmin = lazy(() => import('./OrdersAdmin'))
 const Students = lazy(() => import('./Students'))
 const ActivityPage = lazy(() => import('./Activity'))
 const SupportInbox = lazy(() => import('./SupportInbox'))
+const Teachers = lazy(() => import('./Teachers'))
+const TeacherDetail = lazy(() => import('./TeacherDetail'))
 
 function AdminProvider({ children }) {
   const [state, setState] = useState({ staff: null, loading: true })
@@ -51,6 +54,7 @@ const NAV = [
   { to: '/admin', label: 'Overview', icon: BarChart3, end: true, permission: 'orders' },
   { to: '/admin/notes', label: 'Notes & bundles', icon: FileText, permission: 'content' },
   { to: '/admin/offers', label: 'Offers', icon: Tag, permission: 'pricing' },
+  { to: '/admin/teachers', label: 'Teachers', icon: GraduationCap, permission: 'growth', feature: 'teachers' },
   { to: '/admin/orders', label: 'Orders', icon: ReceiptText, permission: 'orders' },
   { to: '/admin/students', label: 'Students', icon: Users, permission: 'users' },
   { to: '/admin/activity', label: 'Activity', icon: Activity, permission: 'orders' },
@@ -68,7 +72,9 @@ function RequireStaff() {
 function AdminLayout() {
   const { staff, logout, can } = useAdmin()
   const [open, setOpen] = useState(false)
-  const links = NAV.filter((item) => can(item.permission))
+  const features = useFeatures()
+  // A link shows only when the staff role allows it and, for the teacher program, when the server has it switched on.
+  const links = NAV.filter((item) => can(item.permission) && (!item.feature || features[item.feature]))
 
   const nav = (
     <nav aria-label="Admin" className="flex flex-col gap-1">
@@ -180,6 +186,8 @@ export default function AdminApp() {
             <Route path="notes" element={<Guard permission="content"><NotesAdmin /></Guard>} />
             <Route path="notes/:id" element={<Guard permission="content"><NoteEditor /></Guard>} />
             <Route path="offers" element={<Guard permission="pricing"><Coupons /></Guard>} />
+            <Route path="teachers" element={<Guard permission="growth"><Teachers /></Guard>} />
+            <Route path="teachers/:id" element={<Guard permission="growth"><TeacherDetail /></Guard>} />
             <Route path="orders" element={<Guard permission="orders"><OrdersAdmin /></Guard>} />
             <Route path="students" element={<Guard permission="users"><Students /></Guard>} />
             <Route path="activity" element={<Guard permission="orders"><ActivityPage /></Guard>} />
