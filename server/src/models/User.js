@@ -11,15 +11,20 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ROLES, default: 'student' },
     tokenVersion: { type: Number, default: 0, select: false },
     suspendedAt: Date,
+    // Optional contact number (digits only); used to stop a teacher redeeming their own code.
+    phone: { type: String, trim: true, maxlength: 15 },
+    // Shown on /refer and shared as /?ref=CODE. Created the first time it is needed.
+    referralCode: { type: String, uppercase: true, trim: true },
     lastLoginAt: Date,
   },
   { timestamps: true },
 )
 
 userSchema.index({ createdAt: -1 })
+userSchema.index({ referralCode: 1 }, { unique: true, partialFilterExpression: { referralCode: { $type: 'string' } } })
 
 userSchema.methods.toPublic = function toPublic() {
-  return { id: String(this._id), name: this.name, email: this.email, role: this.role, createdAt: this.createdAt }
+  return { id: String(this._id), name: this.name, email: this.email, phone: this.phone ?? null, role: this.role, createdAt: this.createdAt }
 }
 
 export const User = mongoose.model('User', userSchema)

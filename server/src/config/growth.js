@@ -52,6 +52,9 @@ export const growth = {
   ATTRIBUTION_DAYS: int(process.env.ATTRIBUTION_DAYS, 30), // how long a /?t= or /?ref= link is remembered
 }
 
+// How long an unpaid order holds on to the store credit and referral discount it used.
+export const PENDING_ORDER_WINDOW_MS = 30 * 60 * 1000
+
 export const refundWindowMs = () => growth.REFUND_WINDOW_DAYS * 86400000
 
 // Problems with these values would silently misprice orders, so they stop the server from starting.

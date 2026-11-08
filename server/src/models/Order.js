@@ -26,7 +26,24 @@ const orderSchema = new mongoose.Schema(
     // Price before any coupon, the discount applied, and the amount actually charged (amountPaise).
     listAmountPaise: { type: Number, min: 0 },
     discountPaise: { type: Number, default: 0, min: 0 },
+    // Only a coupon-source discount sets couponCode (usage limits count it). The fields below record the one source.
     couponCode: { type: String, uppercase: true, trim: true },
+    discountSource: { type: String, enum: ['none', 'coupon', 'teacher', 'referral'], default: 'none' },
+    // Fingerprint of what the student asked for (typed code, store credit, saved links). A repeated click with the same
+    // fingerprint reuses the open order instead of pricing and creating another.
+    offerKey: String,
+    teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher' },
+    teacherCode: { type: String, uppercase: true, trim: true },
+    referralId: { type: mongoose.Schema.Types.ObjectId, ref: 'Referral' },
+    // Store credit spent on this order (not part of discountPaise): amountPaise = list - discount - credit.
+    creditPaise: { type: Number, default: 0, min: 0, validate: Number.isInteger },
+    // Teacher commission. commissionPercent is the rate at order time; the amount is fixed when the webhook confirms payment.
+    commissionPercent: { type: Number, min: 0, max: 100 },
+    commissionPaise: { type: Number, default: 0, min: 0, validate: Number.isInteger },
+    commissionStatus: { type: String, enum: ['pending', 'payable', 'paid', 'reversed'] },
+    commissionPayout: { type: mongoose.Schema.Types.ObjectId, ref: 'TeacherPayout' },
+    // Set once, by the verified webhook, when teacher / referral sales were recorded for this order.
+    saleConfirmedAt: Date,
     amountPaise: { type: Number, required: true, min: 1, validate: Number.isInteger },
     currency: { type: String, default: 'INR' },
     status: { type: String, enum: ORDER_STATUSES, default: 'pending' },
@@ -44,6 +61,8 @@ orderSchema.index({ user: 1, product: 1, status: 1 })
 orderSchema.index({ status: 1, createdAt: -1 })
 orderSchema.index({ couponCode: 1, status: 1 }, { sparse: true })
 orderSchema.index({ product: 1, status: 1 })
+orderSchema.index({ teacherId: 1, status: 1, paidAt: 1 }, { sparse: true })
+orderSchema.index({ teacherId: 1, commissionStatus: 1 }, { sparse: true })
 
 orderSchema.methods.toPublic = function toPublic() {
   return {
@@ -59,6 +78,8 @@ orderSchema.methods.toPublic = function toPublic() {
     volumeDiscount: (this.volumeDiscountPaise ?? 0) / 100,
     ...(this.productKind === 'cart' ? { items: this.items.map((i) => ({ slug: i.slug, title: i.title, price: (i.listPaise ?? 0) / 100 })) } : {}),
     couponCode: this.couponCode,
+    discountSource: this.discountSource ?? 'none',
+    credit: (this.creditPaise ?? 0) / 100,
     currency: this.currency,
     status: this.status,
     paidAt: this.paidAt,
