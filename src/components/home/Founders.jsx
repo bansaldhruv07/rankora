@@ -10,7 +10,7 @@ const initials = (name) => name.split(' ').map((word) => word[0]).join('').slice
 // The photo if the file exists, otherwise the initials.
 function Avatar({ founder }) {
   const [failed, setFailed] = useState(false)
-  const frame = 'size-28 shrink-0 rounded-2xl ring-1 ring-ember-500/20 transition duration-300 group-hover:rotate-3 group-hover:scale-105 sm:size-36'
+  const frame = 'size-20 shrink-0 rounded-2xl ring-1 ring-ember-500/20 transition duration-300 group-hover:rotate-3 group-hover:scale-105 min-[420px]:size-28 sm:size-36'
   if (founder.photo && !failed) {
     return <img src={founder.photo} alt={founder.name} width="144" height="144" loading="lazy" onError={() => setFailed(true)} className={cn(frame, 'object-cover')} />
   }
@@ -20,8 +20,8 @@ function Avatar({ founder }) {
 function Founder({ founder, index }) {
   const college = COLLEGES[founder.college]
   return (
-    <Reveal delay={index * 100} className="h-full">
-      <article className="group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift sm:gap-6 sm:p-6">
+    <Reveal delay={index * 100} className="h-full min-w-0">
+      <article className="group flex h-full items-center gap-3 rounded-2xl border border-line bg-surface p-4 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift sm:gap-6 sm:p-6">
         <Avatar founder={founder} />
         <div className="min-w-0 flex-1">
           <h3 className="text-xl font-semibold leading-tight sm:text-2xl">{founder.name}</h3>
