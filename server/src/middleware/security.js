@@ -19,6 +19,8 @@ export const readerSessionLimiter = limiter(15 * 60 * 1000, Math.max(60, env.rat
 // Abuse is bounded per session by bytes served instead (see routes/reader.js).
 export const readerStreamLimiter = limiter(15 * 60 * 1000, env.rateLimitMax * 13, 'RATE_LIMITED')
 export const publicWriteLimiter = limiter(60 * 60 * 1000, Math.max(20, env.rateLimitMax / 15), 'RATE_LIMITED')
+// The teacher stats page is public (addressed by a secret token), so guessing tokens is rate limited.
+export const statsLimiter = limiter(15 * 60 * 1000, 40, 'RATE_LIMITED')
 export const paymentLimiter = limiter(15 * 60 * 1000, Math.max(30, env.rateLimitMax / 5), 'PAYMENT_RATE_LIMITED')
 
 // Cookie auth + SameSite=None needs CSRF protection: browsers cannot attach a custom header

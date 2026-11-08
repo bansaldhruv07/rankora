@@ -12,12 +12,14 @@ import { apiLimiter, requireCustomHeader } from './middleware/security.js'
 import adminRoutes from './routes/admin/index.js'
 import authRoutes from './routes/auth.js'
 import cartRoutes from './routes/cart.js'
+import growthRoutes from './routes/growth.js'
 import libraryRoutes from './routes/library.js'
 import orderRoutes from './routes/orders.js'
 import paymentRoutes from './routes/payments.js'
 import productRoutes from './routes/products.js'
 import readerRoutes from './routes/reader.js'
 import supportRoutes from './routes/support.js'
+import teacherStatsRoutes from './routes/teacherStats.js'
 import webhookRoutes from './routes/webhooks.js'
 import { logger } from './utils/logger.js'
 
@@ -101,6 +103,8 @@ export function createApp() {
   app.use('/api/payments', paymentRoutes)
   app.use('/api/library', libraryRoutes)
   app.use('/api/support', supportRoutes)
+  app.use('/api/growth', growthRoutes)
+  app.use('/api/t', teacherStatsRoutes)
 
   if (env.serveFrontend) {
     // Hashed build files never change, so they are cached for a year; everything else is revalidated.
@@ -117,6 +121,8 @@ export function createApp() {
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || req.path.startsWith('/api')) return next()
       res.setHeader('Cache-Control', 'no-cache')
+      // A teacher's private stats page must never be indexed by search engines.
+      if (req.path.startsWith('/t/')) res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
       res.type('html').send(indexHtml)
     })
   }

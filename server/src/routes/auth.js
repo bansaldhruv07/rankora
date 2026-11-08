@@ -7,6 +7,8 @@ import { authLimiter } from '../middleware/security.js'
 import { PasswordReset } from '../models/PasswordReset.js'
 import { User } from '../models/User.js'
 import { accessSummary } from '../services/entitlements.js'
+import { readAttribution } from '../services/growth/attribution.js'
+import { attachFromSavedCode } from '../services/growth/referrals.js'
 import { sendMail } from '../services/mailer.js'
 import { revokeUserSessions } from '../services/viewerSessions.js'
 import { AppError, conflict, forbidden, unauthorized } from '../utils/AppError.js'
@@ -34,6 +36,8 @@ router.post(
     // role is never read from the request: self-registration always creates a student.
     const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, env.bcryptRounds) })
     const withVersion = await User.findById(user._id).select('+tokenVersion')
+    // A friend link followed before sign-up is attached now. It never blocks registration if anything goes wrong.
+    await attachFromSavedCode(user, readAttribution(req).refCode).catch(() => {})
     issueSession(res, withVersion)
     ok(res, { user: user.toPublic() }, undefined, 201)
   }),
@@ -133,8 +137,13 @@ router.patch(
   '/me',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { name } = parse(z.object({ name: z.string().trim().min(2).max(80) }), req.body)
+    const { name, phone } = parse(z.object({ name: z.string().trim().min(2).max(80), phone: z.string().trim().max(20).optional() }), req.body)
     req.user.name = name
+    if (phone !== undefined) {
+      const digits = phone.replace(/\D/g, '')
+      if (digits && (digits.length < 7 || digits.length > 15)) throw new AppError(400, 'BAD_REQUEST', 'Enter a valid phone number')
+      req.user.phone = digits || undefined
+    }
     await req.user.save()
     ok(res, { user: req.user.toPublic() })
   }),
