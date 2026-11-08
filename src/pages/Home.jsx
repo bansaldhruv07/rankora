@@ -1,5 +1,5 @@
 import Hero from "../components/home/Hero";
-import ReviewsWall from "../components/home/ReviewsWall";
+// import ReviewsWall from "../components/home/ReviewsWall"; // re-enable with the <ReviewsWall /> line below once real reviews are in
 import Benefits from "../components/home/Benefits";
 import Offers from "../components/home/Offers";
 import FeaturedNotes from "../components/home/FeaturedNotes";
@@ -13,9 +13,9 @@ export default function Home() {
     <>
       <Hero />
       <Benefits />
-      <Offers />
       <FeaturedNotes />
-      <ReviewsWall />
+      <Offers />
+      {/* <ReviewsWall /> */}
       <SubjectCards />
       <HowItWorks />
       <Founders />

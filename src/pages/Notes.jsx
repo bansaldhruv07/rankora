@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Layers } from 'lucide-react'
-import BundleCard from '../components/store/BundleCard'
+import { ArrowDown, Check, Layers } from 'lucide-react'
+import BundlePoster from '../components/store/BundlePoster'
+import CheckoutModal from '../components/pricing/CheckoutModal'
 import ProductCard, { ProductCardSkeleton } from '../components/store/ProductCard'
 import Button from '../components/ui/Button'
 import Chip from '../components/ui/Chip'
@@ -14,7 +15,7 @@ import { api } from '../lib/api'
 import { pluralize } from '../utils/format'
 import { getSubjectTheme } from '../utils/subjectTheme'
 
-const PAGE_SIZE = 12
+const PAGE_SIZE = 15
 const SUBJECTS = ['physics', 'chemistry', 'mathematics']
 const SORTS = [
   { value: 'featured', label: 'Recommended' },
@@ -24,21 +25,13 @@ const SORTS = [
 ]
 const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback)
 
-// At most three bundles, in this order: all subjects together, the toughest chapters, then complete-subject packs
-// (just the chosen subject's when one is selected). Packs that are not on sale yet are simply skipped.
-function pickBundles(bundles, subject) {
-  const bySlug = new Map(bundles.map((b) => [b.slug, b]))
-  const subjects = subject === 'all' ? SUBJECTS : [subject]
-  return [
-    bySlug.get('jee-complete-pcm'),
-    ...(subject === 'all' ? [bySlug.get('jee-toughest-chapters')] : []),
-    ...subjects.map((id) => bySlug.get(`${id}-complete`)),
-    ...subjects.map((id) => bySlug.get(`${id}-toughest-chapters`)),
-  ]
-    .filter(Boolean)
-    .filter((b, i, all) => all.indexOf(b) === i)
-    .slice(0, 3)
-}
+// The artwork for each bundle. A poster is shown even before its bundle exists (it then says "Coming soon").
+const ALL_BUNDLE = { slug: 'jee-complete-pcm', image: '/bundles/complete.webp', alt: 'Complete JEE bundle: short handwritten notes for Physics, Chemistry and Maths, Class 11 and 12' }
+const SUBJECT_BUNDLES = [
+  { slug: 'physics-complete', image: '/bundles/physics.webp', alt: 'Complete Physics: short handwritten notes, Class 11 and 12' },
+  { slug: 'chemistry-complete', image: '/bundles/chemistry.webp', alt: 'Complete Chemistry: short handwritten notes, Class 11 and 12' },
+  { slug: 'mathematics-complete', image: '/bundles/mathematics.webp', alt: 'Complete Maths: short handwritten notes, Class 11 and 12' },
+]
 
 // The notes marketplace. Everything shown here is a published product from the catalogue API.
 export default function Notes() {
@@ -50,6 +43,8 @@ export default function Notes() {
   const sort = pick(params.get('sort'), SORTS.map((s) => s.value), 'featured')
   const q = params.get('q') ?? ''
   const [search, setSearch] = useState(q)
+  const [checkout, setCheckout] = useState({ open: false, key: 0, bundle: null })
+  const buyBundle = (bundle) => setCheckout((prev) => ({ open: true, key: prev.key + 1, bundle }))
 
   // Typing updates the box immediately; the URL (and request) follows after a short pause.
   useEffect(() => {
@@ -125,8 +120,8 @@ export default function Notes() {
   }, [catalog, subject, classLevel])
 
   const hasFilters = subject !== 'all' || classLevel !== 'all' || chapter !== 'all' || q !== ''
-  const bundles = useMemo(() => pickBundles(bundleData ?? [], subject), [bundleData, subject])
-  const showBundles = bundles.length > 0 && !q && chapter === 'all'
+  const bundleBySlug = useMemo(() => new Map((bundleData ?? []).map((b) => [b.slug, b])), [bundleData])
+  const bundleOwned = (bundle) => Boolean(bundle?.items?.length) && bundle.items.every(owned)
   const clearAll = () => {
     setSearch('')
     setParams({}, { replace: true })
@@ -135,22 +130,62 @@ export default function Notes() {
   return (
     <>
       <header className="border-b border-line-soft bg-ivory-100/60">
-        <div className="page-container grid items-center gap-6 py-7 sm:py-8 lg:grid-cols-[1fr_35rem] lg:gap-12">
-          <div className="max-w-xl">
-            <p className="animate-rise mb-3 flex items-center gap-3 font-mono text-xs font-medium uppercase tracking-[0.18em] text-ember-600">
+        <div className="page-container grid items-center gap-6 py-5 sm:py-6 lg:grid-cols-[1fr_36rem] lg:gap-10">
+          <div className="max-w-md">
+            <p className="animate-rise mb-2 flex items-center gap-3 font-mono text-[0.7rem] font-medium uppercase tracking-[0.18em] text-ember-600">
               <span aria-hidden="true" className="h-px w-8 bg-ember-500" />
               Notes library
             </p>
-            <h1 className="animate-rise stagger text-4xl font-semibold leading-[1.1] sm:text-5xl" style={{ '--d': '60ms' }}>
-              Find your chapter
+            <h1 className="animate-rise stagger text-3xl font-semibold leading-[1.12] sm:text-4xl" style={{ '--d': '60ms' }}>
+              Notes for the whole JEE syllabus
             </h1>
-            <p className="animate-rise stagger mt-3 text-base leading-relaxed text-ink-600 sm:text-lg" style={{ '--d': '140ms' }}>
-              Short JEE notes in book order. Open any note in the Rankora reader and pick up where you stopped.
+            <p className="animate-rise stagger mt-2.5 text-sm leading-relaxed text-ink-600 sm:text-base" style={{ '--d': '140ms' }}>
+              Short handwritten notes in book order. Read them in the Rankora reader on your phone or laptop.
             </p>
+            <ul className="animate-rise stagger mt-4 space-y-1.5 text-[0.82rem] text-ink-700" style={{ '--d': '200ms' }}>
+              {['Free sample on notes that offer one', 'Pay once, keep it, instant access', 'Buy a chapter, a subject or everything'].map((point) => (
+                <li key={point} className="flex items-center gap-2.5">
+                  <Check size={14} aria-hidden="true" className="shrink-0 text-sage-600" />
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <div className="animate-rise stagger mt-5" style={{ '--d': '260ms' }}>
+              <Button href="#notes" variant="outline" size="sm" iconRight={ArrowDown}>
+                Browse single notes
+              </Button>
+            </div>
           </div>
 
-          <div className="animate-rise stagger space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-soft sm:p-5" style={{ '--d': '200ms' }}>
+          <div className="animate-rise stagger" style={{ '--d': '200ms' }}>
+            <BundlePoster wide priority bundle={bundleBySlug.get(ALL_BUNDLE.slug)} owned={bundleOwned(bundleBySlug.get(ALL_BUNDLE.slug))} onBuy={() => buyBundle(bundleBySlug.get(ALL_BUNDLE.slug))} image={ALL_BUNDLE.image} alt={ALL_BUNDLE.alt} className="shadow-lift" />
+          </div>
+        </div>
+      </header>
+
+      <section aria-label="Subject bundles" className="page-container pt-8 sm:pt-10">
+        <div className="mx-auto max-w-[50rem]">
+          <p className="mb-4 inline-flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-[0.16em] text-ember-600">
+            <Layers size={13} aria-hidden="true" />
+            Subject bundles · a whole subject, one price
+          </p>
+          <div className="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0">
+            {SUBJECT_BUNDLES.map((item) => {
+              const bundle = bundleBySlug.get(item.slug)
+              return <BundlePoster key={item.slug} bundle={bundle} owned={bundleOwned(bundle)} onBuy={() => buyBundle(bundle)} image={item.image} alt={item.alt} className="w-[62%] shrink-0 snap-start sm:w-auto" />
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section id="notes" className="page-container scroll-mt-24 py-8 sm:py-10">
+        <div className="space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-soft sm:p-5">
+          <div className="grid items-end gap-3 lg:grid-cols-[1.4fr_1fr_1fr]">
             <SearchInput value={search} onChange={setSearch} placeholder="Search a chapter or topic" label="Search notes" />
+            <Select label="Chapter" value={chapter} onChange={(value) => update({ chapter: value })} options={[{ value: 'all', label: 'All chapters' }, ...chapters.map((c) => ({ value: c, label: c }))]} />
+            <Select label="Sort by" value={sort} onChange={(value) => update({ sort: value })} options={SORTS} />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Subject">
               {subjectTabs.map((tab) => (
                 <Chip key={tab.id} active={subject === tab.id} count={tab.count} onClick={() => update({ subject: tab.id, chapter: 'all' })}>
@@ -165,30 +200,10 @@ export default function Notes() {
                 </Chip>
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Select label="Chapter" value={chapter} onChange={(value) => update({ chapter: value })} options={[{ value: 'all', label: 'All chapters' }, ...chapters.map((c) => ({ value: c, label: c }))]} />
-              <Select label="Sort by" value={sort} onChange={(value) => update({ sort: value })} options={SORTS} />
-            </div>
           </div>
         </div>
-      </header>
 
-      <section className="page-container py-6 sm:py-8">
-        {showBundles && (
-          <div className="mb-8">
-            <p className="mb-3 inline-flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-[0.16em] text-ember-600">
-              <Layers size={13} aria-hidden="true" />
-              Bundles · buy together, pay less
-            </p>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {bundles.map((bundle) => (
-                <BundleCard key={bundle.id} bundle={bundle} owned={bundle.items?.length > 0 && bundle.items.every(owned)} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <p role="status" aria-live="polite" className="text-sm text-ink-600">
             {first.loading ? 'Loading notes…' : <>Showing <strong className="tabular font-semibold text-ink-900">{items.length}</strong> of {pluralize(total, 'note')}</>}
           </p>
@@ -207,8 +222,8 @@ export default function Notes() {
               </Button>
             </EmptyState>
           ) : first.loading ? (
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-5" aria-busy="true">
-              {Array.from({ length: 8 }, (_, i) => (
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 lg:gap-x-4" aria-busy="true">
+              {Array.from({ length: 10 }, (_, i) => (
                 <li key={i}>
                   <ProductCardSkeleton />
                 </li>
@@ -230,7 +245,7 @@ export default function Notes() {
             )
           ) : (
             <>
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-5">
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 lg:gap-x-4">
                 {items.map((item, index) => (
                   <li key={item.id} className="animate-rise stagger" style={{ '--d': `${Math.min(index, 8) * 40}ms` }}>
                     <ProductCard product={item} owned={owned(item)} />
@@ -248,6 +263,19 @@ export default function Notes() {
           )}
         </div>
       </section>
+
+      {checkout.bundle && (
+        <CheckoutModal
+          key={checkout.key}
+          open={checkout.open}
+          onClose={() => setCheckout((prev) => ({ ...prev, open: false }))}
+          slug={checkout.bundle.slug}
+          title={checkout.bundle.title}
+          kind="bundle"
+          itemCount={checkout.bundle.items?.length}
+          fallbackAmount={checkout.bundle.price}
+        />
+      )}
     </>
   )
 }

@@ -6,7 +6,8 @@
       "Bash(python -)",
       "Bash(node --check scripts/organize-catalog.js)",
       "Bash(sed -i 's|<div className=\"grid gap-3 sm:grid-cols-2\">\\\\n              <Select label=\"Chapter\"|X|' src/pages/Notes.jsx)",
-      "Bash(break)"
+      "Bash(break)",
+      "WebSearch"
     ]
   }
 }
