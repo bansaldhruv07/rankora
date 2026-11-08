@@ -6,6 +6,7 @@ import ThemeToggle from './ThemeToggle'
 import Button from '../ui/Button'
 import { useAuth } from '../../hooks/useAuth'
 import { useCart } from '../../hooks/useCart'
+import { useFeatures } from '../../hooks/useFeatures'
 import { ROUTES } from '../../utils/routes'
 import { cn } from '../../utils/cn'
 
@@ -20,6 +21,8 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(() => window.scrollY > 8)
   const { user, openAuth } = useAuth()
   const cart = useCart()
+  const { referrals } = useFeatures()
+  const links = referrals ? [...LINKS, { to: '/refer', label: 'Refer & earn' }] : LINKS
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -49,7 +52,7 @@ export default function Navbar() {
         <Logo onClick={close} tagline />
 
         <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
-          {LINKS.map((link) => (
+          {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -139,7 +142,7 @@ export default function Navbar() {
       {open && (
         <div id="mobile-menu" className="animate-fade border-t border-line bg-ivory-50 lg:hidden">
           <nav aria-label="Mobile" className="page-container flex flex-col py-4">
-            {LINKS.map((link) => (
+            {links.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
