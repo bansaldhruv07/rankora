@@ -106,7 +106,7 @@ describe('coupons and pricing', () => {
     await coupon()
     const { agent } = await registerUser()
     const quote = await agent.post('/api/products/note/quote').send({ coupon: 'save20' })
-    assert.deepEqual(quote.body.data, { list: 200, discount: 40, total: 160, couponCode: 'SAVE20' })
+    assert.deepEqual(quote.body.data, { list: 200, discount: 40, total: 160, couponCode: 'SAVE20', discountSource: 'coupon', discountLabel: 'Coupon SAVE20', notice: null, credit: 0, creditAvailable: 0 })
     const { created, verified, orderId } = await checkout(agent, 'note', 'save20')
     assert.equal(created.body.data.order.amount, 160)
     assert.equal(created.body.data.checkout.amountPaise, 16000)

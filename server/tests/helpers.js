@@ -12,6 +12,9 @@ Object.assign(process.env, {
   MOCK_PAYMENT_SECRET: MOCK_SECRET,
   RATE_LIMIT_MAX: '100000',
   AUTH_RATE_LIMIT_MAX: '100000',
+  // Both growth programs are on in tests; individual tests switch them off to check the flags.
+  REFERRALS_ENABLED: 'true',
+  TEACHER_PROGRAM_ENABLED: 'true',
   PRIVATE_STORAGE_DIR: path.join(os.tmpdir(), `rankora-test-${process.pid}`),
 })
 
