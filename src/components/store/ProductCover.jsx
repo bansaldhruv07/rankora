@@ -84,7 +84,7 @@ export default function ProductCover({ product, className, compact = false }) {
           </p>
         </div>
         <p className="font-display font-semibold tracking-tight opacity-90" style={{ fontSize: '5.4cqw' }}>
-          Rankora
+          JEEdge
         </p>
       </div>
       <Spine color={theme.spine} />

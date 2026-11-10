@@ -27,7 +27,7 @@ services:
         value: gridfs
       # Scratch space for per-student watermarked copies (a disposable cache that is rebuilt on demand).
       - key: PRIVATE_STORAGE_DIR
-        value: /tmp/rankora
+        value: /tmp/jeedge
       # Free instances have 512 MB of memory; large PDFs are processed in memory, so keep uploads modest.
       - key: MAX_PDF_MB
         value: 25
@@ -38,7 +38,7 @@ services:
       # Your MongoDB Atlas connection string: mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/rankora
       - key: MONGODB_URI
         sync: false
-      # This service's own address, e.g. https://rankora.onrender.com (shown in the dashboard once created).
+      # The address visitors use: https://www.jeedge.in (add jeedge.in and www.jeedge.in under Custom Domains first).
       - key: FRONTEND_ORIGIN
         sync: false
       # Payments stay closed until Razorpay is set up. To open them: add the three RAZORPAY_* values in the

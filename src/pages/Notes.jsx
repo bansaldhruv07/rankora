@@ -140,7 +140,7 @@ export default function Notes() {
               Notes for the whole JEE syllabus
             </h1>
             <p className="animate-rise stagger mt-2.5 text-sm leading-relaxed text-ink-600 sm:text-base" style={{ '--d': '140ms' }}>
-              Short handwritten notes in book order. Read them in the Rankora reader on your phone or laptop.
+              Short handwritten notes in book order. Read them in the JEEdge reader on your phone or laptop.
             </p>
             <ul className="animate-rise stagger mt-4 space-y-1.5 text-[0.82rem] text-ink-700" style={{ '--d': '200ms' }}>
               {['Free sample on notes that offer one', 'Pay once, keep it, instant access', 'Buy a chapter, a subject or everything'].map((point) => (

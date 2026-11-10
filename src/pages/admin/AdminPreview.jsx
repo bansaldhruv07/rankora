@@ -12,5 +12,5 @@ export default function AdminPreview() {
     () => api(`/admin/products/${id}/preview-session${sample ? '?sample=1' : ''}`, { method: 'POST' }).then((json) => json.data),
     [id, sample],
   )
-  return <ReaderScreen key={`${id}-${sample}`} openSession={open} backTo={`/admin/notes/${id}`} trackProgress={false} signInHint="Sign in to Rankora Studio to preview." />
+  return <ReaderScreen key={`${id}-${sample}`} openSession={open} backTo={`/admin/notes/${id}`} trackProgress={false} signInHint="Sign in to JEEdge Studio to preview." />
 }

@@ -22,7 +22,7 @@ function openRazorpay(Razorpay, checkout, title) {
       amount: checkout.amountPaise,
       currency: checkout.currency,
       order_id: checkout.providerOrderId,
-      name: 'Rankora',
+      name: 'JEEdge',
       description: title,
       prefill: checkout.prefill,
       theme: { color: '#c2571a' },

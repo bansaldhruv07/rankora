@@ -5,7 +5,7 @@ import { cn } from '../../utils/cn'
 // icon instead of a link that goes nowhere. Linked ones light up in their own brand colour on hover.
 export default function SocialIcons({ className }) {
   return (
-    <ul className={cn('flex items-center gap-2.5', className)} aria-label="Rankora on social media">
+    <ul className={cn('flex items-center gap-2.5', className)} aria-label="JEEdge on social media">
       {allChannels().map(({ id, href, label, Icon, bg, glyph }) => {
         const glyphVars = { '--wa-glyph': glyph, '--tg-fold': glyph }
         return (

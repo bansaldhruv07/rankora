@@ -15,7 +15,7 @@ Object.assign(process.env, {
   // Both growth programs are on in tests; individual tests switch them off to check the flags.
   REFERRALS_ENABLED: 'true',
   TEACHER_PROGRAM_ENABLED: 'true',
-  PRIVATE_STORAGE_DIR: path.join(os.tmpdir(), `rankora-test-${process.pid}`),
+  PRIVATE_STORAGE_DIR: path.join(os.tmpdir(), `jeedge-test-${process.pid}`),
 })
 
 const { default: mongoose } = await import('mongoose')
@@ -42,7 +42,7 @@ export async function stopDb() {
 
 export const resetDb = () => mongoose.connection.dropDatabase().then(() => Promise.all(Object.values(mongoose.models).map((m) => m.init())))
 
-export const client = () => request.agent(app).set('X-Requested-With', 'rankora')
+export const client = () => request.agent(app).set('X-Requested-With', 'jeedge')
 
 let counter = 0
 export async function registerUser(agent = client(), overrides = {}) {

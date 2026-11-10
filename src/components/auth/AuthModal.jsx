@@ -26,7 +26,7 @@ function Field({ label, error, ...props }) {
 }
 
 const COPY = {
-  login: { title: 'Sign in', description: 'Welcome back to Rankora.', cta: 'Sign in' },
+  login: { title: 'Sign in', description: 'Welcome back to JEEdge.', cta: 'Sign in' },
   register: { title: 'Create your account', description: 'Needed to buy notes and keep them in your library.', cta: 'Create account' },
   forgot: { title: 'Reset your password', description: 'Enter your account email and we will send you a link to choose a new password.', cta: 'Send reset link' },
 }
@@ -126,7 +126,7 @@ export default function AuthModal({ open, initialMode, onClose }) {
               </button>
             ) : (
               <>
-                {isRegister ? 'Already have an account?' : 'New to Rankora?'}{' '}
+                {isRegister ? 'Already have an account?' : 'New to JEEdge?'}{' '}
                 <button type="button" onClick={() => go(isRegister ? 'login' : 'register')} className="font-semibold text-ember-600 underline-offset-4 hover:underline">
                   {isRegister ? 'Sign in' : 'Create an account'}
                 </button>

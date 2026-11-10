@@ -1,6 +1,6 @@
 import { BookOpen, Eye, GraduationCap, Layers, ScanText } from 'lucide-react'
 
-// "Why Rankora": one line each, written for a student with limited time left.
+// "Why JEEdge": one line each, written for a student with limited time left.
 export const BENEFITS = [
   { id: 'short', icon: BookOpen, title: 'A chapter in minutes', body: 'Open it, revise it, move to the next one.' },
   { id: 'subject', icon: Layers, title: 'A whole subject in time', body: 'Finish Physics, Chemistry or Maths with days to spare.' },

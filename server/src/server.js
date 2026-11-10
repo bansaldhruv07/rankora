@@ -15,7 +15,7 @@ try {
 }
 
 const server = createApp().listen(env.port, () =>
-  logger.info(`Rankora API listening on :${env.port}`, { provider: env.paymentProvider, origin: env.frontendOrigin }),
+  logger.info(`JEEdge API listening on :${env.port}`, { provider: env.paymentProvider, origin: env.frontendOrigin }),
 )
 
 // Per-student watermarked copies are a disposable cache; remove stale ones every half hour.

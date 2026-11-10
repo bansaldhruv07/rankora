@@ -77,7 +77,7 @@ export default function ResetPassword() {
         )}
         <p className="mt-6 text-center text-sm text-ink-600">
           <Link to={ROUTES.home} className="font-semibold text-ember-600 underline-offset-4 hover:underline">
-            Back to Rankora
+            Back to JEEdge
           </Link>
         </p>
       </Card>

@@ -14,7 +14,7 @@ export function saveProgressOnExit(token, page) {
       method: 'PUT',
       keepalive: true,
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'rankora', ...headers(token) },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'jeedge', ...headers(token) },
       body: JSON.stringify({ page }),
     })
   } catch {
@@ -29,7 +29,7 @@ export function closeSession(token) {
       method: 'DELETE',
       keepalive: true,
       credentials: 'include',
-      headers: { 'X-Requested-With': 'rankora', ...headers(token) },
+      headers: { 'X-Requested-With': 'jeedge', ...headers(token) },
     })
   } catch {
     /* best effort */

@@ -25,7 +25,7 @@ function Founder({ founder, index }) {
         <Avatar founder={founder} />
         <div className="min-w-0 flex-1">
           <h3 className="text-xl font-semibold leading-tight sm:text-2xl">{founder.name}</h3>
-          <p className="mt-0.5 text-sm text-ink-600">{founder.role}, Rankora</p>
+          <p className="mt-0.5 text-sm text-ink-600">{founder.role}, JEEdge</p>
           {college && (
             <p className="mt-2 inline-flex items-center gap-2">
               <span className={cn('inline-grid h-6 min-w-11 place-items-center rounded-md px-1.5 font-mono text-[0.68rem] font-semibold tracking-[0.1em]', college.tone)}>{college.short}</span>
@@ -55,7 +55,7 @@ export default function Founders() {
   return (
     <section className="page-container py-12 sm:py-14">
       <Reveal className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">The people behind Rankora</h2>
+        <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">The people behind JEEdge</h2>
         <p className="text-ink-600">Questions about a note? Message us.</p>
       </Reveal>
       <div className="grid gap-4 md:grid-cols-2">

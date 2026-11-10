@@ -209,7 +209,7 @@ export default function Cart() {
 
             <p className="mt-4 flex gap-2 text-sm leading-relaxed text-ink-600">
               <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-ink-500" />
-              {sandbox ? 'Sandbox mode: this server has no payment gateway configured, so the payment is simulated.' : 'Payments are handled by Razorpay. Rankora never sees your card or UPI details.'}
+              {sandbox ? 'Sandbox mode: this server has no payment gateway configured, so the payment is simulated.' : 'Payments are handled by Razorpay. JEEdge never sees your card or UPI details.'}
             </p>
           </Card>
         </aside>

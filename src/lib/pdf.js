@@ -18,7 +18,7 @@ export async function openDocument(token) {
   const pdfjs = await loadPdfjs()
   const task = pdfjs.getDocument({
     url: readerStreamUrl(),
-    httpHeaders: { 'X-Reader-Token': token, 'X-Requested-With': 'rankora' },
+    httpHeaders: { 'X-Reader-Token': token, 'X-Requested-With': 'jeedge' },
     withCredentials: true,
     disableAutoFetch: true,
     rangeChunkSize: 131072,

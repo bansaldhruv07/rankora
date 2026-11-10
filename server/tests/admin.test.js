@@ -74,7 +74,7 @@ describe('admin access control', () => {
     await User.updateOne({ _id: user.id }, { role: 'admin' })
     const studentToken = jwt.sign({ sub: user.id, tv: 0 }, env.jwtSecret)
     const adminToken = jwt.sign({ sub: user.id, tv: 0, aud: 'admin' }, env.jwtSecret)
-    const call = (path, cookie) => request(app).get(path).set('X-Requested-With', 'rankora').set('Cookie', cookie)
+    const call = (path, cookie) => request(app).get(path).set('X-Requested-With', 'jeedge').set('Cookie', cookie)
     assert.equal((await call('/api/admin/products', `rk_admin=${studentToken}`)).status, 401, 'student token as admin session')
     assert.equal((await call('/api/auth/me', `rk_token=${adminToken}`)).status, 401, 'admin token as student session')
     assert.equal((await call('/api/admin/products', `rk_admin=${adminToken}`)).status, 200, 'genuine admin token')
@@ -104,7 +104,7 @@ describe('admin access control', () => {
     await User.updateOne({ _id: user.id }, { role: 'admin' })
     const noHeader = await request(app).post('/api/admin/auth/login').send({ email: body.email, password: body.password })
     assert.equal(noHeader.status, 403)
-    const login = await request(app).post('/api/admin/auth/login').set('X-Requested-With', 'rankora').send({ email: body.email, password: body.password })
+    const login = await request(app).post('/api/admin/auth/login').set('X-Requested-With', 'jeedge').send({ email: body.email, password: body.password })
     assert.equal(login.status, 200)
     const cookies = login.headers['set-cookie']
     assert.match(cookies.join(';'), /rk_admin=.*Path=\/api\/admin.*HttpOnly/, 'admin cookie is HttpOnly and scoped to /api/admin')

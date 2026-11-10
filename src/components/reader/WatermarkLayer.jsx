@@ -12,7 +12,7 @@ function buildTile(watermark, night, zoom) {
   const fill = night ? 'rgba(255,255,255,0.10)' : 'rgba(20,33,61,0.06)'
   const size = Math.round(11 * Math.min(1.25, Math.max(0.9, zoom)))
   const lines = watermark.label
-    ? [watermark.label, 'Rankora free sample']
+    ? [watermark.label, 'JEEdge free sample']
     : [`${watermark.name} · ${watermark.masked}`, `ID ${watermark.studentId} · ${watermark.orderRef}`]
   const block = (x, y) =>
     `<g transform="translate(${x} ${y}) rotate(${angle})" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="600" fill="${fill}">` +
@@ -26,7 +26,7 @@ export default function WatermarkLayer({ watermark, night = false, zoom = 1 }) {
   // Rounded to the nearest step so the tile is not rebuilt on every pixel of a pinch/zoom.
   const step = Math.round(zoom * 4) / 4
   const tile = useMemo(() => buildTile(watermark, night, step), [watermark, night, step])
-  const footer = watermark.label ? 'Free sample from Rankora' : `Licensed to ${watermark.name} · ${watermark.orderRef}`
+  const footer = watermark.label ? 'Free sample from JEEdge' : `Licensed to ${watermark.name} · ${watermark.orderRef}`
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 select-none overflow-hidden">

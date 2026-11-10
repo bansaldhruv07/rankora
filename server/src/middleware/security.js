@@ -28,7 +28,8 @@ export const paymentLimiter = limiter(15 * 60 * 1000, Math.max(30, env.rateLimit
 const SAFE = new Set(['GET', 'HEAD', 'OPTIONS'])
 export function requireCustomHeader(req, _res, next) {
   if (SAFE.has(req.method) || req.path.startsWith('/webhooks/')) return next()
-  if (req.get('x-requested-with') !== 'rankora') {
+  // 'rankora' is the pre-rename value: a browser that still has the old site open keeps working until it reloads.
+  if (!['jeedge', 'rankora'].includes(req.get('x-requested-with'))) {
     return next(new AppError(403, 'CSRF_REJECTED', 'Missing required request header'))
   }
   next()

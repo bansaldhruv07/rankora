@@ -9,7 +9,7 @@ const SECTIONS = [
     title: 'How access works',
     body: [
       'Notes are digital. As soon as your payment is verified by our server, the note appears in your library and you can start reading.',
-      'You read inside the Rankora reader in your browser. There is no download or print button, and the file is not available at a public link. Your last-read page is saved to your account so you can continue on any device.',
+      'You read inside the JEEdge reader in your browser. There is no download or print button, and the file is not available at a public link. Your last-read page is saved to your account so you can continue on any device.',
       'A reading session closes after a period of inactivity, when you sign out, or if your account is opened in more places than allowed at once. You can reopen the note straight away.',
     ],
   },
@@ -25,7 +25,7 @@ const SECTIONS = [
     id: 'payments',
     title: 'Payments',
     body: [
-      'Payments are processed by Razorpay. Rankora never sees or stores your card or UPI details.',
+      'Payments are processed by Razorpay. JEEdge never sees or stores your card or UPI details.',
       'The price you pay is calculated on our server, including any coupon you applied. Access is granted only after the payment is confirmed. If a payment fails or is left incomplete, no access is granted; the order status in your account shows exactly where it stands.',
       'If money was deducted but the note did not appear, contact support from your account with your order reference and we will look into it.',
     ],
@@ -57,7 +57,7 @@ const SECTIONS = [
 export default function Policies() {
   return (
     <>
-      <PageHeader eyebrow="Policies" title="Clear terms for a digital product" description="How buying, reading, refunds and account use work on Rankora." />
+      <PageHeader eyebrow="Policies" title="Clear terms for a digital product" description="How buying, reading, refunds and account use work on JEEdge." />
       <section className="page-container py-12 sm:py-16">
         <div className="grid gap-12 lg:grid-cols-[14rem_minmax(0,1fr)]">
           <nav aria-label="On this page" className="hidden lg:block">

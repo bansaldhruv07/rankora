@@ -28,7 +28,7 @@ export async function api(path, { method = 'GET', body, headers } = {}) {
     response = await fetch(`${API_BASE}${path}`, {
       method,
       credentials: 'include',
-      headers: { 'X-Requested-With': 'rankora', ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
+      headers: { 'X-Requested-With': 'jeedge', ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
       body: body ? JSON.stringify(body) : undefined,
     })
   } catch {
@@ -45,7 +45,7 @@ export function uploadFile(path, file, { method = 'POST', onProgress, headers, s
     const xhr = new XMLHttpRequest()
     xhr.open(method, `${API_BASE}${path}`)
     xhr.withCredentials = true
-    xhr.setRequestHeader('X-Requested-With', 'rankora')
+    xhr.setRequestHeader('X-Requested-With', 'jeedge')
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
     for (const [key, value] of Object.entries(headers ?? {})) xhr.setRequestHeader(key, value)
     xhr.upload.onprogress = (event) => event.lengthComputable && onProgress?.(event.loaded / event.total)

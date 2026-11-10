@@ -89,7 +89,7 @@ router.post(
       const link = `${env.frontendOrigin}/reset-password?token=${token}`
       await sendMail({
         to: user.email,
-        subject: 'Reset your Rankora password',
+        subject: 'Reset your JEEdge password',
         text: `Hi ${user.name},
 
 Use this link to choose a new password. It works once and expires in ${RESET_MINUTES} minutes:

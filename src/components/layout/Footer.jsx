@@ -80,7 +80,7 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col gap-2 border-t border-line pt-6 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} Rankora. Founded by{' '}
+            © {new Date().getFullYear()} JEEdge. Founded by{' '}
             {SITE.founders.map((founder, index) => (
               <span key={founder.id}>
                 {index > 0 && ' and '}

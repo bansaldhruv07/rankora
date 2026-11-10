@@ -51,7 +51,7 @@ describe('auth', () => {
     const cookie = res.headers['set-cookie'][0].split(';')[0]
     const replay = () => request(app).get('/api/auth/me').set('Cookie', cookie)
     assert.equal((await replay()).status, 200)
-    await request(app).post('/api/auth/logout').set('X-Requested-With', 'rankora').set('Cookie', cookie)
+    await request(app).post('/api/auth/logout').set('X-Requested-With', 'jeedge').set('Cookie', cookie)
     assert.equal((await replay()).status, 401)
   })
 })

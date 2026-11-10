@@ -11,7 +11,7 @@ export default function Benefits() {
         <Reveal>
           <p className="mb-3 flex items-center gap-3 font-mono text-xs font-medium uppercase tracking-[0.18em] text-ember-600">
             <span aria-hidden="true" className="h-px w-8 bg-ember-500" />
-            Why Rankora
+            Why JEEdge
           </p>
           <h2 className="text-3xl font-semibold leading-tight sm:text-4xl">Less time per chapter. More chapters covered.</h2>
           <ul className="mt-5 flex flex-wrap gap-2" aria-label="Problems these notes solve">

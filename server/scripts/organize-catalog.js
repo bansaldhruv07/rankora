@@ -294,7 +294,7 @@ for (const spec of BUNDLES) {
       slug: spec.slug,
       title: spec.title,
       summary: spec.summary,
-      description: `${spec.summary}\n\nOne payment, and every note in the pack is yours to read in the Rankora reader.`,
+      description: `${spec.summary}\n\nOne payment, and every note in the pack is yours to read in the JEEdge reader.`,
       kind: 'bundle',
       type: 'bundle',
       subject: spec.subject,
@@ -307,7 +307,7 @@ for (const spec of BUNDLES) {
       sortOrder: spec.sortOrder,
       bundleItems: ids,
       contents: picked.map((p) => p.hit.name).slice(0, 60),
-      includes: ['Read online in the Rankora reader, on phone or laptop', 'Chapters added to this pack later unlock automatically'],
+      includes: ['Read online in the JEEdge reader, on phone or laptop', 'Chapters added to this pack later unlock automatically'],
     })
     backup.bundlesCreated.push(spec.slug)
   }

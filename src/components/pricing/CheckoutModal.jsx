@@ -69,7 +69,7 @@ export default function CheckoutModal({ open, onClose, slug, title, fallbackAmou
         <ul className="mt-5 space-y-3 text-sm leading-relaxed text-ink-700">
           <li className="flex gap-3">
             <BookOpen size={17} aria-hidden="true" className="mt-0.5 shrink-0 text-ember-600" />
-            Notes open in the Rankora reader and your place is saved, so you can pick up where you stopped.
+            Notes open in the JEEdge reader and your place is saved, so you can pick up where you stopped.
           </li>
           <li className="flex gap-3">
             <Smartphone size={17} aria-hidden="true" className="mt-0.5 shrink-0 text-ember-600" />
@@ -145,7 +145,7 @@ export default function CheckoutModal({ open, onClose, slug, title, fallbackAmou
         <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-ink-500" />
         {sandbox
           ? 'Sandbox mode: this server has no payment gateway configured, so the payment is simulated.'
-          : 'Payments are handled by Razorpay. Rankora never sees your card or UPI details.'}
+          : 'Payments are handled by Razorpay. JEEdge never sees your card or UPI details.'}
       </p>
     </Modal>
   )

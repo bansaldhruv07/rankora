@@ -103,7 +103,7 @@ function AdminLayout() {
         <div className="flex items-center gap-2.5 px-1.5 text-white">
           <LogoMark size={30} />
           <div>
-            <p className="font-display text-lg font-semibold leading-none">Rankora</p>
+            <p className="font-display text-lg font-semibold leading-none">JEEdge</p>
             <p className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-ember-400">Studio</p>
           </div>
         </div>
@@ -172,7 +172,7 @@ export default function AdminApp() {
   useLightOnly()
   useEffect(() => {
     const previous = document.title
-    document.title = 'Rankora Studio'
+    document.title = 'JEEdge Studio'
     return () => {
       document.title = previous
     }

@@ -26,7 +26,7 @@ export async function watermarkPdf(buffer, identity) {
   const pdf = await PDFDocument.load(buffer, { ignoreEncryption: true, updateMetadata: false })
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   const tile = toLatin(`${identity.name} | ${identity.masked} | ID ${identity.studentId} | ${identity.orderRef}`)
-  const footer = toLatin(`Licensed to ${identity.name} (${identity.masked}) | ID ${identity.studentId} | ${identity.orderRef} | Rankora`)
+  const footer = toLatin(`Licensed to ${identity.name} (${identity.masked}) | ID ${identity.studentId} | ${identity.orderRef} | JEEdge`)
   const grey = rgb(0.35, 0.35, 0.38)
 
   for (const page of pdf.getPages()) {
@@ -72,7 +72,7 @@ export async function buildSamplePdf(buffer, pageNumbers) {
       opacity: 0.1,
       rotate: degrees(36),
     })
-    page.drawText('Free sample from Rankora', { x: 18, y: 8, size: 7, font, color: rgb(0.4, 0.4, 0.45), opacity: 0.8 })
+    page.drawText('Free sample from JEEdge', { x: 18, y: 8, size: 7, font, color: rgb(0.4, 0.4, 0.45), opacity: 0.8 })
   }
   return Buffer.from(await out.save({ useObjectStreams: true }))
 }

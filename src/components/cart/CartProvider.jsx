@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CartContext } from '../../hooks/useCart'
 
-const KEY = 'rankora.cart'
+const KEY = 'jeedge.cart'
+const LEGACY_KEY = 'rankora.cart' // saved carts from before the rename are picked up once, then moved to KEY
 export const MAX_CART_ITEMS = 20
 
 // The cart is only a list of note slugs kept in this browser. Prices, ownership and discounts are all worked out by the
 // server (POST /api/cart/quote and POST /api/orders), so a tampered list can never change what is charged.
 function read() {
   try {
-    const raw = JSON.parse(window.localStorage.getItem(KEY))
+    const raw = JSON.parse(window.localStorage.getItem(KEY) ?? window.localStorage.getItem(LEGACY_KEY))
     if (!Array.isArray(raw)) return []
     return [...new Set(raw.filter((slug) => typeof slug === 'string' && /^[a-z0-9-]{1,80}$/.test(slug)))].slice(0, MAX_CART_ITEMS)
   } catch {
@@ -22,6 +23,7 @@ export default function CartProvider({ children }) {
   useEffect(() => {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(slugs))
+      window.localStorage.removeItem(LEGACY_KEY)
     } catch {
       // Private windows can refuse storage; the cart then lasts for this visit only.
     }

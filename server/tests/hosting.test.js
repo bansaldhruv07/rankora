@@ -132,7 +132,7 @@ describe('free hosting: the API serves the website', () => {
     const health = await request(app).get('/api/health')
     assert.equal(health.status, 200)
     assert.equal(health.body.success, true)
-    const missing = await request(app).get('/api/does-not-exist').set('X-Requested-With', 'rankora')
+    const missing = await request(app).get('/api/does-not-exist').set('X-Requested-With', 'jeedge')
     assert.equal(missing.status, 404)
     assert.equal(missing.body.error.code, 'NOT_FOUND', 'unknown API paths stay JSON, not the web page')
   })

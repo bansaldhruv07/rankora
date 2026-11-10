@@ -1,4 +1,4 @@
-# Rankora API
+# JEEdge API
 
 Express 5 + MongoDB (Mongoose) backend. It runs the notes catalogue and admin CMS, accounts, Razorpay payments, purchase entitlements, and the secure PDF reader (short-lived sessions, personalised watermarking, range streaming).
 
@@ -24,7 +24,7 @@ server/
 ## Run it locally (Windows PowerShell)
 
 ```powershell
-cd C:\Users\hp\Documents\Projects\rankora\server
+cd C:\Users\hp\Documents\Projects\jeedge\server
 npm install
 Copy-Item .env.example .env
 # edit .env: JWT_SECRET (32+ random chars) and, if you use Atlas, MONGODB_URI
@@ -65,7 +65,7 @@ See [.env.example](.env.example). Required: `MONGODB_URI`, `FRONTEND_ORIGIN`, `J
 success: { "success": true, "data": ..., "meta": { "page", "limit", "total", "pages" } }
 error:   { "success": false, "error": { "code", "message", "details": [{ "field", "message" }] } }
 ```
-401 unauthenticated, 403 forbidden / missing CSRF header, 404 missing (also for other people's records), 409 conflict, 413 too large, 429 rate limited. Non-GET requests must send `X-Requested-With: rankora`.
+401 unauthenticated, 403 forbidden / missing CSRF header, 404 missing (also for other people's records), 409 conflict, 413 too large, 429 rate limited. Non-GET requests must send `X-Requested-With: jeedge`.
 
 ## Endpoints
 
@@ -123,18 +123,19 @@ One free Render service runs the API **and** the website, and your PDFs are stor
 
 1. **MongoDB Atlas (free M0).** Database Access: create a user with a **new** strong password (rotate the old one). Network Access: allow `0.0.0.0/0` (Render's outgoing addresses change; the password is what protects the database). Copy the connection string and add the database name at the end: `mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/rankora`.
 2. **Push the code** to GitHub (`git add -A`, `git commit`, `git push`). Render deploys from the repository.
-3. **Render**: sign in with GitHub, New, then Blueprint, choose the repository. When asked, paste `MONGODB_URI` and `FRONTEND_ORIGIN`, which is the service's own address: `https://rankora.onrender.com` (if Render shows a different address because the name was taken, use that one; you can change it later under Environment). `JWT_SECRET` is generated for you. The first build takes about 5 to 8 minutes.
-4. **Check it**: open `https://rankora.onrender.com/api/health`. It should show `"status":"ok","db":true`. Then open the plain address to see the website.
+3. **Render**: sign in with GitHub, New, then Blueprint, choose the repository. When asked, paste `MONGODB_URI` and `FRONTEND_ORIGIN`, which is the address visitors use: `https://www.jeedge.in` (exactly this, with `https://` and `www`, no trailing slash). `JWT_SECRET` is generated for you. The first build takes about 5 to 8 minutes.
+   **Custom domain (jeedge.in):** in the Render service open Settings, Custom Domains, and add `www.jeedge.in` and `jeedge.in`. Render then shows the DNS records to create at your domain registrar: a `CNAME` for `www` pointing at the service's `...onrender.com` address, and the records it lists for the bare `jeedge.in` (which it redirects to `www`). HTTPS is issued automatically once DNS has propagated, usually within minutes, sometimes a few hours.
+4. **Check it**: open `https://www.jeedge.in/api/health`. It should show `"status":"ok","db":true`. Then open `https://www.jeedge.in` to see the website. Until DNS is ready, the service's own `onrender.com` address (shown in the dashboard) serves the same site. `FRONTEND_ORIGIN` is used for the links the server writes (password-reset emails and teachers' private stats links), so set it to the real domain before sharing those.
 5. **Create your admin** from your own computer (PowerShell), pointed at the production database. The password is typed hidden and never saved:
    ```powershell
-   cd C:\Users\hp\Documents\Projects\rankora\server
+   cd C:\Users\hp\Documents\Projects\jeedge\server
    $env:MONGODB_URI = "mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/rankora"
    npm run create-admin
    Remove-Item Env:MONGODB_URI
    ```
 6. **Sign in at `/admin`**, upload your notes, publish.
-7. **Keep it awake (optional, free).** Render's free service sleeps after 15 minutes without visitors, and the next visit then waits about 50 seconds. A free monitor such as UptimeRobot that opens `https://rankora.onrender.com/api/health` every 5 minutes avoids that.
-8. **When you get Razorpay**: add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` under Environment, delete `PAYMENT_PROVIDER`, create a webhook in Razorpay pointing at `https://rankora.onrender.com/api/webhooks/razorpay` for `payment.captured`, `order.paid`, `payment.failed` and `refund.processed`, and let it redeploy.
+7. **Keep it awake (optional, free).** Render's free service sleeps after 15 minutes without visitors, and the next visit then waits about 50 seconds. A free monitor such as UptimeRobot that opens `https://www.jeedge.in/api/health` every 5 minutes avoids that.
+8. **When you get Razorpay**: add `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` under Environment, delete `PAYMENT_PROVIDER`, create a webhook in Razorpay pointing at `https://www.jeedge.in/api/webhooks/razorpay` for `payment.captured`, `order.paid`, `payment.failed` and `refund.processed`, and let it redeploy.
 
 Until step 8 the store, uploads and free samples work, but checkout says "Payments are not open yet" and nothing can be bought or unlocked. The server never uses the test "mock" payment mode in production.
 

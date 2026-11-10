@@ -88,7 +88,7 @@ function Ticket({ friend, credit }) {
 function LinkCard({ link, code, friend }) {
   const toast = useToast()
   const [copied, setCopied] = useState('')
-  const message = `I use Rankora for JEE notes. Use my link to get ${formatPrice(friend)} off your first order: ${link}`
+  const message = `I use JEEdge for JEE notes. Use my link to get ${formatPrice(friend)} off your first order: ${link}`
 
   const copy = async (text, what) => {
     try {
@@ -103,7 +103,7 @@ function LinkCard({ link, code, friend }) {
 
   const share = async () => {
     try {
-      await navigator.share({ title: 'Rankora', text: message, url: link })
+      await navigator.share({ title: 'JEEdge', text: message, url: link })
     } catch {
       /* closed the share sheet */
     }

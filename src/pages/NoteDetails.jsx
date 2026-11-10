@@ -71,7 +71,7 @@ function Detail({ product }) {
 
   useEffect(() => {
     const previous = document.title
-    document.title = `${product.title} · Rankora`
+    document.title = `${product.title} · JEEdge`
     return () => {
       document.title = previous
     }
@@ -83,7 +83,7 @@ function Detail({ product }) {
   const items = product.items ?? []
 
   const facts = [
-    ['Format', isBundle ? `${pluralize(items.length, 'note')}, read online` : 'PDF, read online in Rankora'],
+    ['Format', isBundle ? `${pluralize(items.length, 'note')}, read online` : 'PDF, read online in JEEdge'],
     product.pages > 0 && ['Length', pluralize(product.pages, 'page')],
     product.classLevel && ['Class', CLASS_LABELS[product.classLevel]],
     product.chapter && ['Chapter', product.chapter],
@@ -297,7 +297,7 @@ function Detail({ product }) {
           <Section eyebrow="Reading" title="How reading works">
             <ul className="grid gap-5 sm:grid-cols-3">
               {[
-                [FileText, 'In your browser', 'Notes open in the Rankora reader with zoom, page jump and search. There is no file to manage.'],
+                [FileText, 'In your browser', 'Notes open in the JEEdge reader with zoom, page jump and search. There is no file to manage.'],
                 [Smartphone, 'Pick up where you left off', 'Your last page is saved to your account, on any device you sign in from.'],
                 [ShieldCheck, 'Protected, not locked', 'Pages carry your name as a watermark, which discourages sharing. Downloads are turned off.'],
               ].map(([Icon, title, text]) => (

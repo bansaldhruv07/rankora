@@ -26,7 +26,7 @@ export const env = {
     webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
   },
   paymentProvider: process.env.PAYMENT_PROVIDER || '',
-  mockPaymentSecret: process.env.MOCK_PAYMENT_SECRET || 'rankora-mock-secret-not-for-production',
+  mockPaymentSecret: process.env.MOCK_PAYMENT_SECRET || 'jeedge-mock-secret-not-for-production',
   storageDir: process.env.PRIVATE_STORAGE_DIR || fileURLToPath(new URL('../../storage/private', import.meta.url)),
   // Where durable files (original PDFs, covers) live: 'disk' (default) or 'gridfs' (inside MongoDB).
   storageDriver: process.env.STORAGE_DRIVER === 'gridfs' ? 'gridfs' : 'disk',
@@ -45,7 +45,7 @@ export const env = {
     derivedTtlHours: int(process.env.DERIVED_TTL_HOURS, 6),
   },
   smtpUrl: process.env.SMTP_URL || '',
-  mailFrom: process.env.MAIL_FROM || 'Rankora <no-reply@localhost>',
+  mailFrom: process.env.MAIL_FROM || 'JEEdge <no-reply@localhost>',
   supportEmail: process.env.SUPPORT_EMAIL || '',
 }
 
