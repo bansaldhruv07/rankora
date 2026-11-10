@@ -1,6 +1,7 @@
 import { Order } from '../../models/Order.js'
 import { logger } from '../../utils/logger.js'
 import { evaluateMilestones } from './milestones.js'
+import { evaluateAllGifts } from './referralGifts.js'
 import { releaseDueRewards } from './referrals.js'
 import { releaseDueCommissions } from './sales.js'
 
@@ -12,7 +13,8 @@ export async function runGrowthMaintenance(now = new Date()) {
   const commissions = await releaseDueCommissions(now)
   const teacherIds = await Order.distinct('teacherId', { teacherId: { $exists: true }, saleConfirmedAt: { $exists: true } })
   for (const id of teacherIds) await evaluateMilestones(id, now)
-  return { rewards, commissions, teachers: teacherIds.length }
+  const referrers = await evaluateAllGifts(now)
+  return { rewards, commissions, teachers: teacherIds.length, referrers }
 }
 
 let lastRun = 0

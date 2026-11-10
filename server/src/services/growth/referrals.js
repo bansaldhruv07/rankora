@@ -3,6 +3,7 @@ import { Order } from '../../models/Order.js'
 import { Referral } from '../../models/Referral.js'
 import { User } from '../../models/User.js'
 import { codeInUse, newReferralCode, normalizeCode } from './codes.js'
+import { giftOverview } from './referralGifts.js'
 import { creditBalance, ledgerFor, postEntryOnce, reservedCredit } from './credit.js'
 
 // ---- codes -----------------------------------------------------------------------------------------------------------
@@ -157,11 +158,12 @@ export async function reverseReferralForOrder(order) {
 
 export async function referralOverview(user) {
   const code = await ensureReferralCode(user)
-  const [referrals, balance, reserved, ledger] = await Promise.all([
+  const [referrals, balance, reserved, ledger, gifts] = await Promise.all([
     Referral.find({ referrer: user._id }).sort({ createdAt: -1 }).limit(200).lean(),
     creditBalance(user._id),
     reservedCredit(user._id),
     ledgerFor(user._id, 50),
+    giftOverview(user._id),
   ])
   const count = (...statuses) => referrals.filter((r) => statuses.includes(r.status)).length
   const pendingPaise = referrals.filter((r) => r.status === 'pending').length * growth.REFERRER_CREDIT
@@ -171,6 +173,7 @@ export async function referralOverview(user) {
     paid: count('pending', 'granted'),
     pendingRewards: count('pending'),
     pendingCredit: pendingPaise / 100,
+    gifts,
     balance: Math.max(0, balance - reserved) / 100,
     ledger: ledger.map((entry) => ({
       id: String(entry._id),

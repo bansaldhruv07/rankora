@@ -15,3 +15,4 @@ console.log(`Dev MongoDB running at ${mongod.getUri()}rankora (Ctrl+C to stop)`)
 const stop = () => mongod.stop().then(() => process.exit(0))
 process.on('SIGINT', stop)
 process.on('SIGTERM', stop)
+

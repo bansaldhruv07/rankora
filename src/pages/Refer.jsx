@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, Gift, Share2, ShoppingBag, UserPlus, Users, Wallet } from 'lucide-react'
 import { WhatsAppIcon } from '../components/common/BrandIcons'
+import GiftMilestones from '../components/refer/GiftMilestones'
 import { SparkleArt } from '../components/common/Clipart'
 import Accordion from '../components/ui/Accordion'
 import Button from '../components/ui/Button'
@@ -276,6 +277,7 @@ export default function Refer() {
   const credit = data?.rules.referrerCredit ?? features.referrerCredit ?? 0
   const windowDays = data?.rules.refundWindowDays ?? features.refundWindowDays ?? 7
   const cap = data?.rules.monthlyCap ?? features.monthlyCap ?? 10
+  const bigPack = data?.gifts?.bigPackPoints ?? features.bigPackPoints ?? 3
   const link = data ? `${window.location.origin}/?ref=${data.code}` : ''
   const ready = features.loaded && !authLoading
 
@@ -289,6 +291,7 @@ export default function Refer() {
     { question: 'When do I get my credit?', answer: `${windowDays} days after your friend’s payment is confirmed, as long as they have not asked for a refund. It then shows up in your credit history here.` },
     { question: 'Where can I spend it?', answer: 'At checkout, on any note. Switch on “Use my store credit” and it is taken off your total.' },
     { question: 'What if my friend uses a teacher’s code?', answer: 'Only one discount applies to an order, and a teacher’s code always comes first. In that case your friend gets the teacher discount and no referral reward is made.' },
+    { question: 'How do the gift cards work?', answer: `When friends who bought through your link reach the milestones, you unlock a gift card worth a share of what they paid. A friend counts once their first order has passed the ${windowDays}-day refund window. The all-subjects pack counts as ${bigPack} friends. We check each gift card and send it to you ourselves.` },
     { question: 'Are there any limits?', answer: `You earn one reward per friend, up to ${cap} a month. You cannot use your own link, and a reward is taken back if the friend’s order is refunded.` },
   ]
 
@@ -361,6 +364,12 @@ export default function Refer() {
         <Reveal>
           <Calculator friend={friend} credit={credit} cap={cap} />
         </Reveal>
+
+        {(data?.gifts || features.giftTiers?.length > 0) && (
+          <Reveal>
+            <GiftMilestones gifts={data?.gifts} previewTiers={features.giftTiers ?? []} bigPackPoints={bigPack} signedIn={Boolean(data)} onJoin={() => openAuth('register')} />
+          </Reveal>
+        )}
 
         {data && (
           <section aria-labelledby="your-referrals">

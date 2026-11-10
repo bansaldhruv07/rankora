@@ -1,6 +1,6 @@
 import { lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom'
-import { Activity, BarChart3, FileText, GraduationCap, LifeBuoy, LogOut, Menu, ReceiptText, Tag, Users, X } from 'lucide-react'
+import { Activity, BarChart3, FileText, Gift, GraduationCap, LifeBuoy, LogOut, Menu, ReceiptText, Tag, Users, X } from 'lucide-react'
 import { LogoMark } from '../../components/common/Logo'
 import Button from '../../components/ui/Button'
 import { api } from '../../lib/api'
@@ -21,6 +21,7 @@ const ActivityPage = lazy(() => import('./Activity'))
 const SupportInbox = lazy(() => import('./SupportInbox'))
 const Teachers = lazy(() => import('./Teachers'))
 const TeacherDetail = lazy(() => import('./TeacherDetail'))
+const ReferralGifts = lazy(() => import('./ReferralGifts'))
 
 function AdminProvider({ children }) {
   const [state, setState] = useState({ staff: null, loading: true })
@@ -55,6 +56,7 @@ const NAV = [
   { to: '/admin/notes', label: 'Notes & bundles', icon: FileText, permission: 'content' },
   { to: '/admin/offers', label: 'Offers', icon: Tag, permission: 'pricing' },
   { to: '/admin/teachers', label: 'Teachers', icon: GraduationCap, permission: 'growth', feature: 'teachers' },
+  { to: '/admin/gift-cards', label: 'Gift cards', icon: Gift, permission: 'growth', feature: 'referrals' },
   { to: '/admin/orders', label: 'Orders', icon: ReceiptText, permission: 'orders' },
   { to: '/admin/students', label: 'Students', icon: Users, permission: 'users' },
   { to: '/admin/activity', label: 'Activity', icon: Activity, permission: 'orders' },
@@ -188,6 +190,7 @@ export default function AdminApp() {
             <Route path="offers" element={<Guard permission="pricing"><Coupons /></Guard>} />
             <Route path="teachers" element={<Guard permission="growth"><Teachers /></Guard>} />
             <Route path="teachers/:id" element={<Guard permission="growth"><TeacherDetail /></Guard>} />
+            <Route path="gift-cards" element={<Guard permission="growth"><ReferralGifts /></Guard>} />
             <Route path="orders" element={<Guard permission="orders"><OrdersAdmin /></Guard>} />
             <Route path="students" element={<Guard permission="users"><Students /></Guard>} />
             <Route path="activity" element={<Guard permission="orders"><ActivityPage /></Guard>} />

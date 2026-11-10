@@ -7,6 +7,7 @@ const { Order } = await import('../src/models/Order.js')
 const { Coupon } = await import('../src/models/Coupon.js')
 const { CreditEntry } = await import('../src/models/CreditEntry.js')
 const { Referral } = await import('../src/models/Referral.js')
+const { ReferralGift } = await import('../src/models/ReferralGift.js')
 const { Teacher } = await import('../src/models/Teacher.js')
 const { TeacherAdjustment } = await import('../src/models/TeacherAdjustment.js')
 const { TeacherBonus } = await import('../src/models/TeacherBonus.js')
@@ -796,6 +797,177 @@ describe('growth: referrals and teacher program', () => {
     })
   })
 
+  describe('referral gift cards', () => {
+    beforeEach(() => {
+      growth.REFUND_WINDOW_DAYS = 0
+      growth.GIFT_TIERS = [
+        { friends: 2, percent: 10 },
+        { friends: 4, percent: 10 },
+      ]
+    })
+    const soon = () => new Date(Date.now() + 5000)
+
+    // A new friend arrives through the referrer link and pays for `slug`.
+    async function friendBuys(code, slug = 'n1') {
+      const visitor = client()
+      await landing(visitor, { ref: code })
+      const friend = await registerUser(visitor)
+      const { id } = await place(friend.agent, { product: slug })
+      await confirm(id)
+      return { ...friend, orderId: id }
+    }
+    const codeOf = async (referrer) => (await referrer.agent.get('/api/growth/referrals/me')).body.data.code
+    const giftsOf = (referrer) => ReferralGift.find({ referrer: referrer.user.id }).sort({ tier: 1 })
+
+    it('unlocks a tier at the right number of friends, worth a percent of what they paid', async () => {
+      await note('n1', 10000) // each friend pays 5000 after the friend discount
+      const referrer = await registerUser()
+      const code = await codeOf(referrer)
+      await friendBuys(code)
+      await runGrowthMaintenance(soon())
+      assert.equal(await ReferralGift.countDocuments(), 0)
+
+      await friendBuys(code)
+      await runGrowthMaintenance(soon())
+      await runGrowthMaintenance(soon()) // awarded once only
+      const [gift] = await giftsOf(referrer)
+      assert.equal(await ReferralGift.countDocuments(), 1)
+      assert.equal(gift.tier, 2)
+      assert.equal(gift.status, 'eligible')
+      assert.equal(gift.basisPaise, 10000)
+      assert.equal(gift.valuePaise, 1000) // 10% of 10000 paise = Rs 10
+
+      // The next tier is worth 10% of what the friends since the last tier paid, not of everything again.
+      await friendBuys(code)
+      await friendBuys(code)
+      await runGrowthMaintenance(soon())
+      const gifts = await giftsOf(referrer)
+      assert.deepEqual(gifts.map((g) => [g.tier, g.valuePaise]), [[2, 1000], [4, 1000]])
+    })
+
+    it('counts the all-subjects pack as three friends', async () => {
+      await note('n1', 10000)
+      await note('jee-complete-pcm', 40000)
+      const referrer = await registerUser()
+      const code = await codeOf(referrer)
+      await friendBuys(code, 'jee-complete-pcm') // 3 points, paid 35000
+      await runGrowthMaintenance(soon())
+      let overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(overview.points, 3)
+      assert.deepEqual(overview.tiers.map((t) => t.state), ['unlocked', 'locked'])
+      assert.equal(overview.tiers[0].value, 35) // 10% of Rs 350
+      assert.deepEqual(overview.next, { friends: 4, left: 1, valueSoFar: 0 })
+
+      await friendBuys(code) // one more point reaches tier 4
+      await runGrowthMaintenance(soon())
+      overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(overview.points, 4)
+      assert.equal(overview.tiers[1].state, 'unlocked')
+      assert.equal(overview.next, null)
+    })
+
+    it('waits out the refund window and shows friends who are still waiting', async () => {
+      growth.REFUND_WINDOW_DAYS = 7
+      await note('n1', 10000)
+      const referrer = await registerUser()
+      const code = await codeOf(referrer)
+      await friendBuys(code)
+      await friendBuys(code)
+      await runGrowthMaintenance(later(3))
+      assert.equal(await ReferralGift.countDocuments(), 0)
+      const waiting = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(waiting.points, 0)
+      assert.equal(waiting.waitingPoints, 2)
+      await runGrowthMaintenance(later(8))
+      assert.equal(await ReferralGift.countDocuments({ status: 'eligible' }), 1)
+    })
+
+    it('does not count a friend who used a teacher code, and sets an unapproved gift back after a refund', async () => {
+      await note('n1', 10000)
+      const admin = await adminAgent()
+      const teacher = await teacherByAdmin(admin)
+      const referrer = await registerUser()
+      const code = await codeOf(referrer)
+      // This friend followed the referral link but then used a teacher code: the referrer gets nothing.
+      const visitor = client()
+      await landing(visitor, { ref: code })
+      const other = await registerUser(visitor)
+      await landing(other.agent, { teacher: teacher.code })
+      await confirm((await place(other.agent, { product: 'n1' })).id)
+
+      const a = await friendBuys(code)
+      await friendBuys(code)
+      await runGrowthMaintenance(soon())
+      assert.equal(await ReferralGift.countDocuments({ status: 'eligible' }), 1)
+
+      assert.equal((await refund(admin, a.orderId)).status, 200)
+      await runGrowthMaintenance(soon())
+      assert.equal((await giftsOf(referrer))[0].status, 'not_eligible')
+      const hidden = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(hidden.tiers[0].state, 'locked')
+
+      await friendBuys(code) // back to two counted friends
+      await runGrowthMaintenance(soon())
+      assert.equal((await giftsOf(referrer))[0].status, 'eligible')
+    })
+
+    it('never changes a gift that was already approved, even after a refund', async () => {
+      await note('n1', 10000)
+      const admin = await adminAgent()
+      const referrer = await registerUser()
+      const code = await codeOf(referrer)
+      const a = await friendBuys(code)
+      await friendBuys(code)
+      await runGrowthMaintenance(soon())
+      const [gift] = await giftsOf(referrer)
+      assert.equal((await admin.post(`/api/admin/referral-gifts/${gift._id}/approve`)).status, 200)
+      await refund(admin, a.orderId)
+      await runGrowthMaintenance(soon())
+      assert.equal((await giftsOf(referrer))[0].status, 'approved')
+    })
+
+    it('lets an admin approve and then issue a gift, in that order, with a note', async () => {
+      await note('n1', 10000)
+      const admin = await adminAgent()
+      const referrer = await registerUser()
+      const code = await codeOf(referrer)
+      await friendBuys(code)
+      await friendBuys(code)
+      await runGrowthMaintenance(soon())
+      const list = await admin.get('/api/admin/referral-gifts')
+      assert.equal(list.status, 200)
+      assert.equal(list.body.data.length, 1)
+      const gift = list.body.data[0]
+      assert.equal(gift.student.email, referrer.user.email)
+      assert.equal(gift.value, 10)
+
+      const early = await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({ note: 'PVR voucher' })
+      assert.equal(early.status, 409)
+      assert.equal((await admin.post(`/api/admin/referral-gifts/${gift.id}/approve`)).status, 200)
+      assert.equal((await admin.post(`/api/admin/referral-gifts/${gift.id}/approve`)).status, 409)
+      assert.equal((await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({})).status, 400)
+      const issued = await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({ note: 'PVR voucher sent on WhatsApp' })
+      assert.equal(issued.status, 200)
+      assert.equal(issued.body.data.status, 'issued')
+      const overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(overview.tiers[0].state, 'issued')
+    })
+
+    it('needs an admin session with the growth permission, and referrals switched on', async () => {
+      const admin = await adminAgent()
+      const student = (await registerUser()).agent
+      const editor = await staffAgent('editor')
+      const id = new mongoose.Types.ObjectId()
+      for (const [method, url] of [['get', '/api/admin/referral-gifts'], ['post', `/api/admin/referral-gifts/${id}/approve`], ['post', `/api/admin/referral-gifts/${id}/issue`]]) {
+        assert.equal((await client()[method](url).send({})).status, 401, `anonymous ${method} ${url}`)
+        assert.equal((await student[method](url).send({})).status, 401, `student ${method} ${url}`)
+        assert.equal((await editor[method](url).send({})).status, 403, `editor ${method} ${url}`)
+      }
+      growth.referralsEnabled = false
+      assert.equal((await admin.get('/api/admin/referral-gifts')).status, 404)
+    })
+  })
+
   describe('feature flags', () => {
     it('hides referrals when the flag is off and ignores friend codes', async () => {
       await note('n1')
@@ -812,7 +984,7 @@ describe('growth: referrals and teacher program', () => {
 
     it('reports both flags and the rates in the public features endpoint', async () => {
       const res = await client().get('/api/growth/features')
-      assert.deepEqual(res.body.data, { referrals: true, teachers: true, friendDiscount: 50, referrerCredit: 50, refundWindowDays: 7 })
+      assert.deepEqual(res.body.data, { referrals: true, teachers: true, friendDiscount: 50, referrerCredit: 50, refundWindowDays: 7, monthlyCap: 10, giftTiers: growth.GIFT_TIERS, bigPackPoints: 3 })
     })
 
     it('keeps the unique indexes the programs rely on', async () => {
@@ -821,6 +993,7 @@ describe('growth: referrals and teacher program', () => {
       assert.ok((await names(Teacher)).some((n) => n.startsWith('statsToken_')))
       assert.ok((await names(Referral)).some((n) => n.startsWith('referred_')))
       assert.ok((await names(TeacherBonus)).includes('teacher_1_milestone_1'))
+      assert.ok((await names(ReferralGift)).includes('referrer_1_tier_1'))
       assert.ok((await names(CreditEntry)).includes('type_1_referral_1'))
       assert.ok((await names(CreditEntry)).includes('type_1_order_1'))
       assert.ok((await names(User)).includes('referralCode_1'))

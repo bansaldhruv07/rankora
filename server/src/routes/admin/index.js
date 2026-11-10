@@ -6,6 +6,7 @@ import growthRoutes from './growth.js'
 import insightRoutes from './insights.js'
 import orderRoutes from './orders.js'
 import productRoutes from './products.js'
+import referralGiftRoutes from './referralGifts.js'
 import supportRoutes from './support.js'
 import userRoutes from './users.js'
 
@@ -17,6 +18,7 @@ router.use(requireStaff)
 router.use('/products', productRoutes)
 router.use('/coupons', couponRoutes)
 router.use('/growth', growthRoutes)
+router.use('/referral-gifts', referralGiftRoutes)
 router.use('/orders', orderRoutes)
 router.use('/users', userRoutes)
 router.use('/support', supportRoutes)

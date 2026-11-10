@@ -33,6 +33,25 @@ function readMilestones(raw) {
   }
 }
 
+// Refer-and-earn gift cards. A student whose friends reach `friends` (counted below) unlocks a gift card worth
+// `percent`% of what those friends paid since the previous gift. An admin approves and sends each one by hand.
+export const DEFAULT_GIFT_TIERS = [
+  { friends: 10, percent: 10 },
+  { friends: 25, percent: 10 },
+  { friends: 50, percent: 10 },
+]
+
+function readGiftTiers(raw) {
+  if (!raw) return DEFAULT_GIFT_TIERS
+  try {
+    const list = JSON.parse(raw)
+    const valid = Array.isArray(list) && list.length > 0 && list.every((t) => Number.isInteger(t.friends) && t.friends > 0 && Number.isInteger(t.percent) && t.percent >= 0 && t.percent <= 100)
+    return valid ? list.map((t) => ({ friends: t.friends, percent: t.percent })).sort((a, b) => a.friends - b.friends) : DEFAULT_GIFT_TIERS
+  } catch {
+    return DEFAULT_GIFT_TIERS
+  }
+}
+
 export const growth = {
   referralsEnabled: flag(process.env.REFERRALS_ENABLED),
   teachersEnabled: flag(process.env.TEACHER_PROGRAM_ENABLED),
@@ -41,6 +60,11 @@ export const growth = {
   FRIEND_DISCOUNT: int(process.env.FRIEND_DISCOUNT, 5000), // paise off the friend's first paid order
   REFERRER_CREDIT: int(process.env.REFERRER_CREDIT, 5000), // paise of store credit for the referrer
   REFERRAL_MONTHLY_CAP: int(process.env.REFERRAL_MONTHLY_CAP, 10), // rewards one referrer can earn per calendar month
+
+  // Gift cards. Every paying friend counts as 1; buying a pack in BIG_PACK_SLUGS counts as BIG_PACK_POINTS.
+  GIFT_TIERS: readGiftTiers(process.env.REFERRAL_GIFT_TIERS),
+  BIG_PACK_SLUGS: (process.env.BIG_PACK_SLUGS ?? 'jee-complete-pcm').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean),
+  BIG_PACK_POINTS: int(process.env.BIG_PACK_POINTS, 3),
 
   // Offline teachers
   TEACHER_STUDENT_DISCOUNT_PERCENT: int(process.env.TEACHER_STUDENT_DISCOUNT_PERCENT, 15),
@@ -66,6 +90,7 @@ export function growthProblems() {
     if (!Number.isInteger(growth[key]) || growth[key] < 0 || growth[key] > 90) problems.push(`${key} must be a whole number from 0 to 90`)
   }
   if (!Number.isInteger(growth.REFUND_WINDOW_DAYS) || growth.REFUND_WINDOW_DAYS < 0) problems.push('REFUND_WINDOW_DAYS must be 0 or more')
+  if (!Number.isInteger(growth.BIG_PACK_POINTS) || growth.BIG_PACK_POINTS < 1) problems.push('BIG_PACK_POINTS must be at least 1')
   if (!Number.isInteger(growth.REFERRAL_MONTHLY_CAP) || growth.REFERRAL_MONTHLY_CAP < 1) problems.push('REFERRAL_MONTHLY_CAP must be at least 1')
   return problems
 }
