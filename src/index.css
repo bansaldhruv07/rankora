@@ -38,7 +38,7 @@
   --color-sage-600: #587659;
   --color-sage-700: #435c46;
 
-  --color-brand: #b88300; /* the logo yellow, deepened so it reads on a light page */
+  --color-brand: #c2571a; /* the accent orange (ember-500): the "dge" of the wordmark */
   --color-surface: #fffdf8;
   --color-night: #14213d;
   --color-line: #ddd3be;
@@ -123,7 +123,7 @@
   --color-ivory-300: #26324d;
   --color-surface: #131c2f;
   --color-night: #182440;
-  --color-brand: #ffd21f;
+  --color-brand: #e68b50;
 
   --color-ink-950: #fbf7ee;
   --color-ink-900: #f2ecdf;
