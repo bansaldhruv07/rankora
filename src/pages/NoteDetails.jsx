@@ -10,6 +10,7 @@ import CheckoutModal from '../components/pricing/CheckoutModal'
 import { DifficultyBadge, SubjectBadge } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
+import WelcomeNote from '../components/pricing/WelcomeNote'
 import EmptyState from '../components/ui/EmptyState'
 import { useAuth } from '../hooks/useAuth'
 import { useApi } from '../hooks/useApi'
@@ -193,11 +194,7 @@ function Detail({ product }) {
                         </Button>
                       )}
                     </div>
-                    {!isBundle && !free && (
-                      <p className="mt-4 rounded-xl bg-sage-50 px-3.5 py-2.5 text-sm leading-relaxed text-sage-700">
-                        Buying more than one note? Add them to your cart and save 10% on 2, 15% on 3, 20% on 5 or more.
-                      </p>
-                    )}
+                    {!free && <WelcomeNote className="mt-4" />}
                     {!user && !free && (
                       <p className="mt-4 text-sm text-ink-600">
                         You&apos;ll sign in or create an account at checkout.{' '}

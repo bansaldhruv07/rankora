@@ -1,4 +1,4 @@
-// Puts the catalogue in JEE order, prices the hard chapters, builds bundles and creates the launch coupons.
+// Puts the catalogue in JEE order, prices every chapter, builds bundles and sets up the welcome coupon.
 // Safe to re-run whenever you upload new notes: it only fixes what is out of place.
 //
 //   node scripts/organize-catalog.js            dry run: prints exactly what would change, writes nothing
@@ -7,12 +7,11 @@
 // What it does
 //   1. Matches each note to a chapter by its title and sets `chapter` and `sortOrder` to the NCERT book order
 //      (Class 11 then Class 12, Physics, then Chemistry, then Mathematics).
-//   2. Chapters marked `hard` below get difficulty "Hard" and the hard-chapter price (₹99 selling, ₹199 original).
-//      Other notes keep the price they have.
-//   3. Creates or extends bundles from the notes that exist. Bundle prices are a fixed % below the sum of the
-//      notes' selling prices, so the "you save" figure shown on the site is true. Existing bundles are never
-//      repriced; only newly matching notes are added (and existing buyers get them).
-//   4. Creates the coupons in COUPONS if they do not exist yet.
+//   2. Every note is priced the same: ₹99 selling, ₹199 original. Chapters marked `hard` below also get difficulty "Hard".
+//   3. Creates or extends bundles from the notes that exist. Bundles with a fixed price (BUNDLES below) are set to it;
+//      the others are a fixed % below the sum of the notes' selling prices and keep whatever price they have once
+//      they exist. Newly matching notes are added to existing bundles (and existing buyers get them).
+//   4. Sets up the coupons in COUPONS (WELCOME10 is applied automatically at checkout) and switches off RETIRED_COUPONS.
 //   5. Takes the old Premium subscription plans off sale (there is no subscription).
 import fs from 'node:fs'
 import path from 'node:path'
@@ -29,8 +28,8 @@ const APPLY = process.argv.includes('--apply')
 // ---------------------------------------------------------------------------------------------
 // Settings you may want to change
 // ---------------------------------------------------------------------------------------------
-const HARD_PRICE = 99 // selling price of a hard chapter (rupees)
-const HARD_MRP = 199 // original price shown struck through
+const NOTE_PRICE = 99 // selling price of every chapter (rupees)
+const NOTE_MRP = 199 // original price shown struck through
 
 // `m` is matched against the note title (lower case, punctuation turned into spaces). `hard` marks the chapters
 // students find toughest. Order in each list = book order.
@@ -117,12 +116,12 @@ const CHAPTERS = {
 const SUBJECT_BASE = { physics: 100, chemistry: 1000, mathematics: 2000 }
 const STEP = 10
 
-// `price` / `mrp` (rupees) are fixed offers: Complete Physics is ₹999, Complete Chemistry ₹1,499, Complete Mathematics
-// ₹799 and all three subjects ₹3,500 (students get 20% off any of them with the WELCOME20 coupon). With no `mrp`, the
-// site shows the sum of the notes' own prices as the struck-through price, and only when that is higher. Bundles without a fixed price are `discount` (a fraction) below the sum of their notes' selling prices,
+// `price` / `mrp` (rupees) are fixed offers: Complete Physics and Complete Chemistry are ₹1,499 each, Complete
+// Mathematics ₹999 and all three subjects ₹3,499. With no `mrp`, the site shows the sum of the notes' own prices as the
+// struck-through price, and only when that is higher. Bundles without a fixed price are `discount` (a fraction) below the sum of their notes' selling prices,
 // always more than the cart's own volume discount (10 / 15 / 20 %) so a bundle is worth buying.
 const BUNDLES = [
-  { slug: 'physics-complete', subject: 'physics', classLevel: 'both', chapters: 'ALL', price: 999, mrp: 1499, sortOrder: 1,
+  { slug: 'physics-complete', subject: 'physics', classLevel: 'both', chapters: 'ALL', price: 1499, sortOrder: 1,
     title: 'Complete Physics: Class 11 and 12',
     summary: 'Every Physics chapter in one pack, in book order. Revise the whole subject before JEE.' },
   { slug: 'physics-toughest-chapters', subject: 'physics', classLevel: 'both', chapters: 'HARD', discount: 0.3, sortOrder: 2,
@@ -147,7 +146,7 @@ const BUNDLES = [
   { slug: 'chemistry-complete', subject: 'chemistry', classLevel: 'both', chapters: 'ALL', price: 1499, sortOrder: 7,
     title: 'Complete Chemistry: Class 11 and 12',
     summary: 'Every Chemistry chapter in one pack, in book order. Revise the whole subject before JEE.' },
-  { slug: 'mathematics-complete', subject: 'mathematics', classLevel: 'both', chapters: 'ALL', price: 799, sortOrder: 8,
+  { slug: 'mathematics-complete', subject: 'mathematics', classLevel: 'both', chapters: 'ALL', price: 999, sortOrder: 8,
     title: 'Complete Mathematics: Class 11 and 12',
     summary: 'Every Mathematics chapter in one pack, in book order. Revise the whole subject before JEE.' },
   { slug: 'chemistry-toughest-chapters', subject: 'chemistry', classLevel: 'both', chapters: 'HARD', discount: 0.3, sortOrder: 10,
@@ -159,18 +158,19 @@ const BUNDLES = [
   { slug: 'jee-toughest-chapters', subject: 'mixed', classLevel: 'both', chapters: 'HARD_ALL', minSubjects: 2, discount: 0.3, sortOrder: 12,
     title: 'Toughest JEE Chapters Pack',
     summary: 'The hardest chapters from every subject, together at a lower price.' },
-  { slug: 'jee-complete-pcm', subject: 'mixed', classLevel: 'both', chapters: 'EVERYTHING', minSubjects: 3, price: 3500, sortOrder: 9,
+  { slug: 'jee-complete-pcm', subject: 'mixed', classLevel: 'both', chapters: 'EVERYTHING', minSubjects: 3, price: 3499, sortOrder: 9,
     title: 'Complete JEE: Physics, Chemistry and Mathematics',
     summary: 'Every chapter of all three subjects in one pack. The full syllabus, revised in time.' },
 ]
 
 // Real discounts only: no end date is invented. Add validUntil in the admin if you want one.
 const COUPONS = [
-  { code: 'WELCOME20', description: '20% off your first order: the student welcome offer', type: 'percent', value: 20, minOrderPaise: 0, perUserLimit: 1 },
-  { code: 'JEE15', description: '15% off orders of ₹499 or more', type: 'percent', value: 15, maxDiscountPaise: 25000, minOrderPaise: 49900, perUserLimit: 1 },
+  // The student welcome offer: 10% off any note or pack, once per student, applied automatically at checkout when no
+  // teacher code, friend discount or typed code is in play. No cap, so "10% off" is always true.
+  { code: 'WELCOME10', description: '10% off: the student welcome offer, applied automatically at checkout', type: 'percent', value: 10, minOrderPaise: 0, perUserLimit: 1 },
 ]
-// Replaced by WELCOME20. Switched off (not deleted) so old orders keep their record and nobody can stack both welcome codes.
-const RETIRED_COUPONS = ['WELCOME10']
+// No other coupons are offered. Switched off (not deleted) so old orders keep their record.
+const RETIRED_COUPONS = ['WELCOME20', 'JEE15']
 // ---------------------------------------------------------------------------------------------
 
 const norm = (title) => String(title ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -203,7 +203,7 @@ for (const note of notes) {
   const hit = matchChapter(note.subject, note.title) ?? matchChapter(note.subject, note.chapter)
   if (!hit) {
     unmatched.push(note)
-    plan.push({ note, set: { sortOrder: 9000 + plan.length }, chapter: null, primary: false })
+    plan.push({ note, set: { sortOrder: 9000 + plan.length, pricePaise: NOTE_PRICE * 100, mrpPaise: NOTE_MRP * 100 }, chapter: null, primary: false })
     continue
   }
   const key = `${note.subject}:${hit.index}`
@@ -216,12 +216,8 @@ for (const note of notes) {
   }
   const duplicates = plan.filter((p) => p.key === key).length
   const sortOrder = SUBJECT_BASE[note.subject] + hit.index * STEP + (primary ? 0 : duplicates)
-  const set = { sortOrder, chapter: hit.name }
-  if (hit.hard) {
-    set.difficulty = 'Hard'
-    set.pricePaise = HARD_PRICE * 100
-    set.mrpPaise = HARD_MRP * 100
-  }
+  const set = { sortOrder, chapter: hit.name, pricePaise: NOTE_PRICE * 100, mrpPaise: NOTE_MRP * 100 }
+  if (hit.hard) set.difficulty = 'Hard'
   const entry = { note, key, hit, set, primary }
   plan.push(entry)
   if (primary) seen.set(key, entry)
@@ -280,18 +276,23 @@ for (const spec of BUNDLES) {
   if (existing) {
     const have = new Set(existing.bundleItems.map(String))
     const added = ids.filter((id) => !have.has(String(id)))
-    // Only bundles with a fixed offer are repriced; the rest keep whatever price you set.
-    const repriced = spec.price != null && (existing.pricePaise !== price || existing.mrpPaise !== mrp)
+    // Only bundles with a fixed offer are repriced; the rest keep whatever price they have.
+    const repriced = spec.price != null && (existing.pricePaise !== price || (existing.mrpPaise ?? null) !== (mrp ?? null))
     console.log(
       `  = ${spec.slug.padEnd(32)} exists (${existing.bundleItems.length} notes, ${rupees(existing.pricePaise)})` +
-        `${repriced ? `, price -> ${rupees(price)} (worth ${rupees(mrp)})` : ''}` +
+        `${repriced ? `, price -> ${rupees(price)}${mrp != null ? ` (worth ${rupees(mrp)})` : ''}` : ''}` +
         `${added.length ? `, would add ${added.length} new ${added.length === 1 ? 'note' : 'notes'}` : ''}${!repriced && !added.length ? ', up to date' : ''}`,
     )
     if (APPLY && (added.length || repriced)) {
       const $set = {}
+      const $unset = {}
       if (added.length) $set.bundleItems = [...existing.bundleItems, ...added]
-      if (repriced) Object.assign($set, { pricePaise: price, ...(mrp != null ? { mrpPaise: mrp } : {}) })
-      await Product.updateOne({ _id: existing._id }, { $set })
+      if (repriced) {
+        $set.pricePaise = price
+        if (mrp != null) $set.mrpPaise = mrp
+        else if (existing.mrpPaise != null) $unset.mrpPaise = ''
+      }
+      await Product.updateOne({ _id: existing._id }, { $set, ...(Object.keys($unset).length ? { $unset } : {}) })
       if (added.length) await extendBundleBuyers(existing._id, added)
       backup.bundlesExtended.push({ slug: spec.slug, added: added.map(String), before: repriced ? { pricePaise: existing.pricePaise, mrpPaise: existing.mrpPaise ?? null } : undefined })
     }
@@ -341,18 +342,25 @@ for (const plan of plans) {
 // ---- 4: coupons -----------------------------------------------------------------------------------
 console.log('\nCOUPONS')
 for (const coupon of COUPONS) {
-  const exists = await Coupon.exists({ code: coupon.code })
-  console.log(`  ${exists ? '=' : '+'} ${coupon.code.padEnd(10)} ${coupon.description}${exists ? ' (already exists)' : ''}`)
-  if (APPLY && !exists) {
+  const existing = await Coupon.findOne({ code: coupon.code })
+  const same =
+    existing && existing.active && existing.type === coupon.type && existing.value === coupon.value && !existing.maxDiscountPaise &&
+    (existing.minOrderPaise ?? 0) === coupon.minOrderPaise && existing.perUserLimit === coupon.perUserLimit && !existing.products.length
+  console.log(`  ${!existing ? '+' : same ? '=' : '~'} ${coupon.code.padEnd(10)} ${coupon.description}${!existing ? '' : same ? ' (already set)' : ' (will be switched on and set to this)'}`)
+  if (!APPLY || same) continue
+  if (!existing) {
     await Coupon.create({ ...coupon, active: true })
     backup.couponsCreated.push(coupon.code)
+  } else {
+    backup.couponsChanged = [...(backup.couponsChanged ?? []), { code: coupon.code, before: { active: existing.active, value: existing.value, maxDiscountPaise: existing.maxDiscountPaise ?? null, minOrderPaise: existing.minOrderPaise ?? 0, perUserLimit: existing.perUserLimit, products: existing.products.map(String) } }]
+    await Coupon.updateOne({ _id: existing._id }, { $set: { ...coupon, active: true, products: [] }, $unset: { maxDiscountPaise: '' } })
   }
 }
 
 for (const code of RETIRED_COUPONS) {
   const old = await Coupon.findOne({ code })
   if (!old) continue
-  console.log(`  ${old.active ? '-' : '='} ${code.padEnd(10)} ${old.active ? 'switched off (replaced by WELCOME20)' : 'already off'}`)
+  console.log(`  ${old.active ? '-' : '='} ${code.padEnd(10)} ${old.active ? 'switched off (no longer offered)' : 'already off'}`)
   if (APPLY && old.active) {
     await Coupon.updateOne({ _id: old._id }, { $set: { active: false } })
     backup.couponsRetired = [...(backup.couponsRetired ?? []), code]

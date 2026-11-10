@@ -1,16 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Check, Copy, Gift, Layers, Tag } from 'lucide-react'
+import { ArrowRight, Check, Copy, GraduationCap, Gift, Layers } from 'lucide-react'
 import Reveal from '../ui/Reveal'
 import { useApi } from '../../hooks/useApi'
 import { useFeatures } from '../../hooks/useFeatures'
 import { formatPrice } from '../../utils/format'
 import { ROUTES } from '../../utils/routes'
-import { cn } from '../../utils/cn'
-
-// Must match the volume tiers in server/src/services/pricing.js (CART_TIERS) and the coupons created by
-// server/scripts/organize-catalog.js.
-const CODE = 'WELCOME20'
 
 function CopyCode({ code }) {
   const [copied, setCopied] = useState(false)
@@ -40,7 +35,7 @@ function CopyCode({ code }) {
 
 // Real offers only: the bundle saving is read live from the catalogue, so it can never drift from the price.
 export default function Offers() {
-  const { loaded, referrals, friendDiscount, referrerCredit } = useFeatures()
+  const { loaded, referrals, teachers, welcome, friendDiscount, referrerCredit } = useFeatures()
   // With refer and earn switched on it takes the first slot, so the bundle is only fetched when it is shown.
   const { data: bundles } = useApi(loaded && !referrals ? '/products?kind=bundle&limit=20' : null)
   // The complete-subject pack: its price and the list price it is compared against come straight from the catalogue.
@@ -48,9 +43,13 @@ export default function Offers() {
     .filter((b) => /^(physics|chemistry|mathematics)-complete$/.test(b.slug))
     .sort((a, b) => a.price - b.price)[0]
 
+  const cards = Number(referrals || Boolean(subjectPack)) + Number(Boolean(welcome)) + Number(Boolean(teachers))
+  if (cards === 0) return null
+  const columns = { 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3' }[cards]
+
   return (
     <section aria-label="Offers" className="page-container py-8 sm:py-10">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={`grid gap-4 ${columns}`}>
         {referrals && (
           <Reveal className="h-full">
             <Link
@@ -99,40 +98,35 @@ export default function Offers() {
           </Reveal>
         )}
 
-        <Reveal delay={90} className="h-full">
-          <div className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6 shadow-soft">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-ember-50 px-3 py-1 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-ember-700">
-              <Tag size={13} aria-hidden="true" />
-              Buy more, save more
-            </span>
-            <ul className="mt-4 grid grid-cols-3 gap-3 text-center">
-              {[
-                ['2 notes', '10%'],
-                ['3 notes', '15%'],
-                ['5 notes', '20%'],
-              ].map(([label, off]) => (
-                <li key={label} className={cn('rounded-xl border border-line-soft bg-ivory-50 px-2 py-3')}>
-                  <p className="font-display text-2xl font-semibold text-ember-600">{off}</p>
-                  <p className="mt-0.5 text-xs text-ink-600">{label}</p>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 text-sm text-ink-600">Added automatically in your cart. No code needed.</p>
-          </div>
-        </Reveal>
-
-        <Reveal delay={180} className="h-full">
-          <div className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6 shadow-soft">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-sage-100 px-3 py-1 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-sage-700">
-              Student welcome offer
-            </span>
-            <p className="mt-4 font-display text-4xl font-semibold leading-none sm:text-5xl">20% off</p>
-            <p className="mt-2 text-ink-600">Use this code at checkout for an instant 20% discount on your order.</p>
-            <div className="mt-auto">
-              <CopyCode code={CODE} />
+        {welcome && (
+          <Reveal delay={90} className="h-full">
+            <div className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6 shadow-soft">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-sage-100 px-3 py-1 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-sage-700">
+                Student welcome offer
+              </span>
+              <p className="mt-4 font-display text-4xl font-semibold leading-none sm:text-5xl">{welcome.percent}% off</p>
+              <p className="mt-2 text-ink-600">
+                Use this code for an instant {welcome.percent}% discount on any note or pack. It is applied automatically at checkout.
+              </p>
+              <div className="mt-auto">
+                <CopyCode code={welcome.code} />
+              </div>
             </div>
-          </div>
-        </Reveal>
+          </Reveal>
+        )}
+
+        {teachers && (
+          <Reveal delay={180} className="h-full">
+            <div className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6 shadow-soft">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-ember-50 px-3 py-1 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-ember-700">
+                <GraduationCap size={13} aria-hidden="true" />
+                Teacher&apos;s code
+              </span>
+              <p className="mt-4 font-display text-3xl font-semibold leading-tight sm:text-4xl">Got a code from your teacher?</p>
+              <p className="mt-2 text-ink-600">Enter it at checkout for your teacher&apos;s discount. It is used in place of the welcome offer.</p>
+            </div>
+          </Reveal>
+        )}
       </div>
     </section>
   )

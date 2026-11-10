@@ -106,7 +106,7 @@ describe('coupons and pricing', () => {
     await coupon()
     const { agent } = await registerUser()
     const quote = await agent.post('/api/products/note/quote').send({ coupon: 'save20' })
-    assert.deepEqual(quote.body.data, { list: 200, discount: 40, total: 160, couponCode: 'SAVE20', discountSource: 'coupon', discountLabel: 'Coupon SAVE20', notice: null, credit: 0, creditAvailable: 0 })
+    assert.deepEqual(quote.body.data, { list: 200, discount: 40, total: 160, couponCode: 'SAVE20', discountSource: 'coupon', discountLabel: 'Coupon SAVE20', notice: null, autoApplied: false, credit: 0, creditAvailable: 0 })
     const { created, verified, orderId } = await checkout(agent, 'note', 'save20')
     assert.equal(created.body.data.order.amount, 160)
     assert.equal(created.body.data.checkout.amountPaise, 16000)
@@ -295,28 +295,25 @@ describe('cart', () => {
     return { created, orderId, verified }
   }
 
-  it('gives a bigger discount the more notes are bought together', async () => {
+  it('gives no discount for buying several notes together', async () => {
     await notes(5)
     const guest = client()
-    const totals = {}
-    for (const n of [1, 2, 3, 5]) totals[n] = await quoteOf(guest, slugs(n))
-    assert.equal(totals[1].total, 100, 'one note: no discount')
-    assert.equal(totals[1].nextTier.needed, 1)
-    assert.equal(totals[2].total, 180)
-    assert.equal(totals[2].volumePercent, 10)
-    assert.equal(totals[3].total, 255)
-    assert.equal(totals[5].total, 400)
-    assert.equal(totals[5].nextTier, null)
-    assert.equal(totals[3].volumeDiscount, 45)
+    for (const n of [1, 2, 3, 5]) {
+      const q = await quoteOf(guest, slugs(n))
+      assert.equal(q.total, 100 * n, `${n} notes cost exactly their list price`)
+      assert.equal(q.discount, 0)
+      assert.equal(q.nextTier, undefined)
+      assert.equal(q.volumePercent, undefined)
+    }
   })
 
-  it('applies a coupon on top of the volume discount', async () => {
+  it('applies one coupon to the whole cart total', async () => {
     await notes(2)
     await Coupon.create({ code: 'EXTRA10', type: 'percent', value: 10 })
     const q = await quoteOf(client(), slugs(2), 'EXTRA10')
-    assert.equal(q.volumeDiscount, 20)
-    assert.equal(q.couponDiscount, 18, '10% of the 180 left after the volume discount')
-    assert.equal(q.total, 162)
+    assert.equal(q.couponDiscount, 20, '10% of the 200 list total')
+    assert.equal(q.discount, 20)
+    assert.equal(q.total, 180)
   })
 
   it('sells the cart as one order at the quoted price and gives access to every note', async () => {
@@ -324,7 +321,7 @@ describe('cart', () => {
     const { agent } = await registerUser()
     const { created, verified } = await payCart(agent, slugs(3))
     assert.equal(created.status, 201)
-    assert.equal(created.body.data.order.amount, 255)
+    assert.equal(created.body.data.order.amount, 300)
     assert.equal(created.body.data.order.kind, 'cart')
     assert.equal(created.body.data.order.items.length, 3)
     assert.equal(verified.status, 200)
@@ -333,7 +330,7 @@ describe('cart', () => {
     assert.deepEqual(lib.items.map((i) => i.source), ['purchase', 'purchase', 'purchase'])
     assert.equal((await openReader((await registerUser()).agent, 'n1')).status, 403, 'other students get nothing')
     const order = await Order.findById(created.body.data.order.id)
-    assert.equal(order.volumeDiscountPaise, 4500)
+    assert.equal(order.discountPaise, 0)
     assert.equal(order.listAmountPaise, 30000)
   })
 
@@ -341,7 +338,7 @@ describe('cart', () => {
     await notes(2)
     const { agent } = await registerUser()
     const created = await agent.post('/api/orders').send({ items: slugs(2), amount: 1, total: 1 })
-    assert.equal(created.body.data.order.amount, 180)
+    assert.equal(created.body.data.order.amount, 200)
     assert.equal((await agent.post('/api/orders').send({ items: slugs(2), product: 'n1' })).status, 400)
     assert.equal((await agent.post('/api/orders').send({ items: [] })).status, 400)
     assert.equal((await agent.post('/api/orders').send({})).status, 400)
@@ -354,7 +351,7 @@ describe('cart', () => {
     const q = await quoteOf(agent, slugs(3))
     assert.deepEqual(q.owned, ['n1'])
     assert.equal(q.count, 2)
-    assert.equal(q.total, 180)
+    assert.equal(q.total, 200, 'two notes cost exactly their list price')
 
     await buy(agent, 'n2')
     const single = await agent.post('/api/orders').send({ items: slugs(3) })

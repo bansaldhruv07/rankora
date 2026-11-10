@@ -108,7 +108,6 @@ async function createCartOrder(req, res, products, input) {
     items: products.map((p) => ({ product: p._id, title: p.title, slug: p.slug, listPaise: p.pricePaise })),
     listAmountPaise: priced.listPaise,
     discountPaise: priced.discountPaise,
-    volumeDiscountPaise: priced.volumeDiscountPaise,
     ...growthOrderFields(priced),
     offerKey: key,
     referralId,

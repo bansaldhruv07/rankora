@@ -21,7 +21,7 @@ const orderSchema = new mongoose.Schema(
         listPaise: Number,
       },
     ],
-    // Part of discountPaise that came from buying several notes together (the rest is a coupon).
+    // Part of discountPaise that came from the buy-more discount, which no longer exists: only old orders have a value.
     volumeDiscountPaise: { type: Number, default: 0, min: 0 },
     // Price before any coupon, the discount applied, and the amount actually charged (amountPaise).
     listAmountPaise: { type: Number, min: 0 },

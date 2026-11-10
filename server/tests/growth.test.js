@@ -108,7 +108,7 @@ describe('growth: referrals and teacher program', () => {
       assert.equal((await Order.findById(res.body.data.order.id)).discountSource, 'referral')
     })
 
-    it('prices a cart with the volume discount first, then the teacher discount', async () => {
+    it('prices a cart with the teacher discount on the whole total (no buy-more discount)', async () => {
       await note('c1', 10000)
       await note('c2', 10000)
       const admin = await adminAgent()
@@ -116,11 +116,11 @@ describe('growth: referrals and teacher program', () => {
       const { agent } = await registerUser()
       await landing(agent, { teacher: teacher.code })
       const quote = await agent.post('/api/cart/quote').send({ items: ['c1', 'c2'] })
-      assert.equal(quote.body.data.volumeDiscount, 20) // 10% of 200
+      assert.equal(quote.body.data.volumeDiscount, undefined)
       assert.equal(quote.body.data.discountSource, 'teacher')
-      assert.equal(quote.body.data.total, 153) // 180 - 15% (27)
+      assert.equal(quote.body.data.total, 170) // 200 - 15% (30)
       const { res } = await place(agent, { items: ['c1', 'c2'] })
-      assert.equal(res.body.data.checkout.amountPaise, 15300)
+      assert.equal(res.body.data.checkout.amountPaise, 17000)
     })
   })
 
@@ -177,15 +177,22 @@ describe('growth: referrals and teacher program', () => {
       let q = await agent.post('/api/products/n1/quote').send({ coupon: second.code.toLowerCase() })
       assert.equal(q.body.data.discountSource, 'teacher')
       assert.equal(q.body.data.total, 80)
-      // typed coupon replaces the saved teacher link: no teacher discount on top
+      // a typed coupon cannot replace a saved teacher link: the teacher always wins, and the student is told
       q = await agent.post('/api/products/n1/quote').send({ coupon: ' save10 ' })
-      assert.equal(q.body.data.discountSource, 'coupon')
-      assert.equal(q.body.data.total, 90)
+      assert.equal(q.body.data.discountSource, 'teacher')
+      assert.equal(q.body.data.total, 85) // first teacher: 15% off
+      assert.match(q.body.data.notice, /teacher discount is already applied/i)
       const { id } = await place(agent, { product: 'n1', coupon: 'SAVE10' })
       const order = await Order.findById(id)
-      assert.equal(order.discountSource, 'coupon')
-      assert.equal(order.teacherId, undefined)
-      assert.equal(order.commissionPercent, undefined)
+      assert.equal(order.discountSource, 'teacher')
+      assert.equal(order.couponCode, undefined)
+      assert.equal(order.commissionPercent, 20)
+
+      // without a saved teacher link, the same typed coupon is used
+      const { agent: plain } = await registerUser()
+      q = await plain.post('/api/products/n1/quote').send({ coupon: ' save10 ' })
+      assert.equal(q.body.data.discountSource, 'coupon')
+      assert.equal(q.body.data.total, 90)
     })
 
     it('rejects an unknown code with a clear message and falls back to the saved link when nothing is typed', async () => {
@@ -968,6 +975,99 @@ describe('growth: referrals and teacher program', () => {
     })
   })
 
+  describe('welcome offer', () => {
+    const welcome = () => Coupon.create({ code: 'WELCOME10', type: 'percent', value: 10, perUserLimit: 1 })
+
+    it('is applied automatically when nothing else is, for a note and for a cart, signed in or not', async () => {
+      await note('w1', 10000)
+      await note('w2', 10000)
+      await welcome()
+      const guest = client()
+      const single = (await guest.post('/api/products/w1/quote').send({})).body.data
+      assert.equal(single.discountSource, 'coupon')
+      assert.equal(single.couponCode, 'WELCOME10')
+      assert.equal(single.autoApplied, true)
+      assert.equal(single.total, 90)
+      assert.match(single.discountLabel, /welcome/i)
+      const cart = (await guest.post('/api/cart/quote').send({ items: ['w1', 'w2'] })).body.data
+      assert.equal(cart.autoApplied, true)
+      assert.equal(cart.discount, 20) // 10% of the 200 total, nothing for buying two together
+      assert.equal(cart.total, 180)
+
+      const { agent } = await registerUser()
+      const { res, id } = await place(agent, { items: ['w1', 'w2'] })
+      assert.equal(res.body.data.checkout.amountPaise, 18000)
+      const order = await Order.findById(id)
+      assert.equal(order.discountSource, 'coupon')
+      assert.equal(order.couponCode, 'WELCOME10')
+    })
+
+    it('can be used once per student, then is simply not offered again', async () => {
+      await note('w1', 10000)
+      await note('w2', 10000)
+      await welcome()
+      const { agent } = await registerUser()
+      await confirm((await place(agent, { product: 'w1' })).id)
+      const next = (await agent.post('/api/products/w2/quote').send({})).body.data
+      assert.equal(next.discountSource, 'none')
+      assert.equal(next.autoApplied, false)
+      assert.equal(next.total, 100)
+      // Typing it again explains why it is refused, rather than silently doing nothing.
+      const typed = await agent.post('/api/products/w2/quote').send({ coupon: 'WELCOME10' })
+      assert.equal(typed.status, 400)
+      assert.match(typed.body.error.message, /already used/i)
+    })
+
+    it('loses to a teacher code or link, and to a friend discount, and a typed coupon replaces it', async () => {
+      await note('w1', 10000)
+      await welcome()
+      await Coupon.create({ code: 'SAVE20', type: 'percent', value: 20 })
+      const admin = await adminAgent()
+      const teacher = await teacherByAdmin(admin)
+
+      const typedTeacher = (await (await registerUser()).agent.post('/api/products/w1/quote').send({ coupon: teacher.code })).body.data
+      assert.equal(typedTeacher.discountSource, 'teacher')
+      assert.equal(typedTeacher.total, 85) // 15% off, not 10%
+      assert.equal(typedTeacher.autoApplied, false)
+
+      const { agent: linked } = await registerUser()
+      await landing(linked, { teacher: teacher.code })
+      const saved = (await linked.post('/api/products/w1/quote').send({})).body.data
+      assert.equal(saved.discountSource, 'teacher')
+      assert.equal(saved.autoApplied, false)
+      const { id } = await place(linked, { product: 'w1' })
+      const order = await Order.findById(id)
+      assert.equal(order.teacherId.toString(), teacher.id)
+      assert.equal(order.couponCode, undefined)
+
+      const { friend } = await referrerAndFriend()
+      const friendQuote = (await friend.agent.post('/api/products/w1/quote').send({})).body.data
+      assert.equal(friendQuote.discountSource, 'referral')
+      assert.equal(friendQuote.total, 50) // Rs 50 off, not 10%
+
+      const typedCoupon = (await (await registerUser()).agent.post('/api/products/w1/quote').send({ coupon: 'SAVE20' })).body.data
+      assert.equal(typedCoupon.couponCode, 'SAVE20')
+      assert.equal(typedCoupon.autoApplied, false)
+      assert.equal(typedCoupon.total, 80)
+    })
+
+    it('is described in the public features, and can be switched off', async () => {
+      await note('w1', 10000)
+      assert.equal((await client().get('/api/growth/features')).body.data.welcome, null) // no such coupon yet
+      const coupon = await welcome()
+      assert.deepEqual((await client().get('/api/growth/features')).body.data.welcome, { code: 'WELCOME10', percent: 10 })
+
+      growth.WELCOME_COUPON = ''
+      assert.equal((await client().get('/api/growth/features')).body.data.welcome, null)
+      assert.equal((await client().post('/api/products/w1/quote').send({})).body.data.discountSource, 'none')
+
+      growth.WELCOME_COUPON = 'WELCOME10'
+      await Coupon.updateOne({ _id: coupon._id }, { $set: { active: false } })
+      assert.equal((await client().get('/api/growth/features')).body.data.welcome, null)
+      assert.equal((await client().post('/api/products/w1/quote').send({})).body.data.discountSource, 'none')
+    })
+  })
+
   describe('feature flags', () => {
     it('hides referrals when the flag is off and ignores friend codes', async () => {
       await note('n1')
@@ -984,7 +1084,7 @@ describe('growth: referrals and teacher program', () => {
 
     it('reports both flags and the rates in the public features endpoint', async () => {
       const res = await client().get('/api/growth/features')
-      assert.deepEqual(res.body.data, { referrals: true, teachers: true, friendDiscount: 50, referrerCredit: 50, refundWindowDays: 7, monthlyCap: 10, giftTiers: growth.GIFT_TIERS, bigPackPoints: 3 })
+      assert.deepEqual(res.body.data, { welcome: null, referrals: true, teachers: true, friendDiscount: 50, referrerCredit: 50, refundWindowDays: 7, monthlyCap: 10, giftTiers: growth.GIFT_TIERS, bigPackPoints: 3 })
     })
 
     it('keeps the unique indexes the programs rely on', async () => {

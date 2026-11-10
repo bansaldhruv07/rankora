@@ -4,6 +4,7 @@ import { growth } from '../config/growth.js'
 import { requireAuth } from '../middleware/auth.js'
 import { featureEnabled, requireFeature } from '../middleware/features.js'
 import { publicWriteLimiter } from '../middleware/security.js'
+import { Coupon } from '../models/Coupon.js'
 import { TeacherClick } from '../models/TeacherClick.js'
 import { readAttribution, writeAttribution } from '../services/growth/attribution.js'
 import { normalizeCode } from '../services/growth/codes.js'
@@ -15,15 +16,26 @@ import { asyncHandler, ok, parse } from '../utils/http.js'
 const router = Router()
 
 // What the website may show. Rates are included so the copy ("Get ₹50 off") always matches the server.
-router.get('/features', (_req, res) => {
+// The automatic welcome coupon, as the pages describe it. Null unless it is on, a plain percentage and open to everyone.
+async function welcomeOffer() {
+  if (!growth.WELCOME_COUPON) return null
+  const coupon = await Coupon.findOne({ code: growth.WELCOME_COUPON, active: true }).lean()
+  const now = new Date()
+  if (!coupon || coupon.type !== 'percent' || coupon.products?.length || coupon.minOrderPaise > 0) return null
+  if ((coupon.validFrom && coupon.validFrom > now) || (coupon.validUntil && coupon.validUntil < now)) return null
+  return { code: coupon.code, percent: coupon.value, ...(coupon.maxDiscountPaise ? { maxDiscount: coupon.maxDiscountPaise / 100 } : {}) }
+}
+
+router.get('/features', asyncHandler(async (_req, res) => {
   ok(res, {
+    welcome: await welcomeOffer(),
     referrals: featureEnabled('referrals'),
     teachers: featureEnabled('teachers'),
     ...(featureEnabled('referrals')
       ? { friendDiscount: growth.FRIEND_DISCOUNT / 100, referrerCredit: growth.REFERRER_CREDIT / 100, refundWindowDays: growth.REFUND_WINDOW_DAYS, monthlyCap: growth.REFERRAL_MONTHLY_CAP, giftTiers: growth.GIFT_TIERS, bigPackPoints: growth.BIG_PACK_POINTS }
       : {}),
   })
-})
+}))
 
 const day = () => new Date().toISOString().slice(0, 10)
 const code = z.string().trim().max(30).regex(/^[A-Za-z0-9]*$/).optional()

@@ -1,7 +1,7 @@
 import { growth, PENDING_ORDER_WINDOW_MS } from '../config/growth.js'
 import { Coupon } from '../models/Coupon.js'
 import { Order } from '../models/Order.js'
-import { badRequest } from '../utils/AppError.js'
+import { AppError, badRequest } from '../utils/AppError.js'
 import { availableCredit } from './growth/credit.js'
 import { classifyCode } from './growth/discounts.js'
 
@@ -15,16 +15,8 @@ const redemptionFilter = (extra) => ({
   $or: [{ status: 'paid' }, { status: 'pending', createdAt: { $gt: new Date(Date.now() - PENDING_WINDOW_MS) } }],
 })
 
-// Buying several notes in one order is cheaper per note. Highest matching tier wins; a single note gets no discount.
-export const CART_TIERS = [
-  { min: 5, percent: 20 },
-  { min: 3, percent: 15 },
-  { min: 2, percent: 10 },
-]
+// There is no discount for buying several notes together: the only price cuts are the one discount source below.
 export const MAX_CART_ITEMS = 20
-export const cartPercentFor = (count) => CART_TIERS.find((tier) => count >= tier.min)?.percent ?? 0
-// The next tier up from `count`, so the cart can say "add one more to save 15%".
-export const nextCartTier = (count) => [...CART_TIERS].reverse().find((tier) => tier.min > count) ?? null
 
 // All discounts round DOWN to whole paise, in the customer's disfavour by at most a paisa, and never go below the minimum charge.
 export const percentDiscount = (basePaise, percent) => Math.max(0, Math.min(Math.floor((basePaise * percent) / 100), basePaise - MIN_CHARGE_PAISE))
@@ -62,13 +54,25 @@ export async function resolveCoupon({ code, userId, product, productIds = [produ
   return coupon
 }
 
-// The one discount source plus optional store credit, applied to `basePaise` (the price after any volume discount).
+// The welcome coupon, when it can be used by this user on this order; otherwise null (never an error, it is automatic).
+async function usableWelcomeCoupon({ userId, productIds, pricePaise }) {
+  if (!growth.WELCOME_COUPON) return null
+  try {
+    return await resolveCoupon({ code: growth.WELCOME_COUPON, userId, productIds, pricePaise })
+  } catch (err) {
+    if (err instanceof AppError && err.status === 400) return null
+    throw err
+  }
+}
+
+// The one discount source plus optional store credit, applied to `basePaise`.
 // Which source wins is decided in growth/discounts.js; this turns it into rupees.
 async function applySource({ basePaise, productIds, code, user, attribution, useCredit }) {
   const decision = await classifyCode({ code, user, attribution })
   let coupon = null
   let discountPaise = 0
   let label = null
+  let auto = false
 
   if (decision.source === 'coupon') {
     coupon = await resolveCoupon({ code: decision.code, userId: user?._id, productIds, pricePaise: basePaise })
@@ -80,6 +84,14 @@ async function applySource({ basePaise, productIds, code, user, attribution, use
   } else if (decision.source === 'referral') {
     discountPaise = flatDiscount(basePaise, growth.FRIEND_DISCOUNT)
     label = 'Friend discount'
+  } else {
+    // Nothing else applies, so the welcome offer does, without the student typing anything.
+    coupon = await usableWelcomeCoupon({ userId: user?._id, productIds, pricePaise: basePaise })
+    if (coupon) {
+      discountPaise = discountFor(coupon, basePaise)
+      label = `Welcome offer ${coupon.code}`
+      auto = true
+    }
   }
 
   const afterDiscount = basePaise - discountPaise
@@ -87,7 +99,8 @@ async function applySource({ basePaise, productIds, code, user, attribution, use
   const creditPaise = useCredit ? Math.min(creditAvailable, Math.max(0, afterDiscount - MIN_CHARGE_PAISE)) : 0
 
   return {
-    source: decision.source,
+    source: auto ? 'coupon' : decision.source,
+    auto,
     coupon,
     teacher: decision.teacher ?? null,
     referral: decision.referral ?? null,
@@ -101,28 +114,18 @@ async function applySource({ basePaise, productIds, code, user, attribution, use
   }
 }
 
-// Prices a cart of notes: the volume discount comes off the list total first, then the one discount source, then store credit.
+// Prices a cart of notes: the list total, then the one discount source, then store credit.
 export async function quoteCart({ products, code, user, attribution, useCredit }) {
   const listPaise = products.reduce((sum, p) => sum + p.pricePaise, 0)
-  const volumePercent = cartPercentFor(products.length)
-  const volumeDiscountPaise = Math.max(0, Math.min(Math.floor((listPaise * volumePercent) / 100), listPaise - MIN_CHARGE_PAISE))
-  const afterVolume = listPaise - volumeDiscountPaise
-  const applied = await applySource({ basePaise: afterVolume, productIds: products.map((p) => p._id), code, user, attribution, useCredit })
-  return {
-    ...applied,
-    listPaise,
-    volumePercent,
-    volumeDiscountPaise,
-    couponDiscountPaise: applied.codeDiscountPaise,
-    discountPaise: volumeDiscountPaise + applied.codeDiscountPaise,
-  }
+  const applied = await applySource({ basePaise: listPaise, productIds: products.map((p) => p._id), code, user, attribution, useCredit })
+  return { ...applied, listPaise, couponDiscountPaise: applied.codeDiscountPaise, discountPaise: applied.codeDiscountPaise }
 }
 
 // The single place a price is decided. Callers never pass amounts in.
 export async function quote({ product, code, user, attribution, useCredit }) {
   const listPaise = product.pricePaise
   const applied = await applySource({ basePaise: listPaise, productIds: [product._id], code, user, attribution, useCredit })
-  return { ...applied, listPaise, volumeDiscountPaise: 0, discountPaise: applied.codeDiscountPaise }
+  return { ...applied, listPaise, discountPaise: applied.codeDiscountPaise }
 }
 
 // The fields of a priced order that are stored on the Order.
@@ -137,6 +140,7 @@ const publicBreakdown = (q) => ({
   discountSource: q.source,
   discountLabel: q.label,
   notice: q.notice,
+  autoApplied: Boolean(q.auto),
   credit: q.creditPaise / 100,
   creditAvailable: q.creditAvailable / 100,
 })
@@ -151,11 +155,9 @@ export const quoteToPublic = (q) => ({
 
 export const cartQuoteToPublic = (q) => ({
   list: (q?.listPaise ?? 0) / 100,
-  volumePercent: q?.volumePercent ?? 0,
-  volumeDiscount: (q?.volumeDiscountPaise ?? 0) / 100,
   couponCode: q?.coupon?.code ?? null,
   couponDiscount: (q?.couponDiscountPaise ?? 0) / 100,
   discount: (q?.discountPaise ?? 0) / 100,
   total: (q?.totalPaise ?? 0) / 100,
-  ...(q ? publicBreakdown(q) : { discountSource: 'none', discountLabel: null, notice: null, credit: 0, creditAvailable: 0 }),
+  ...(q ? publicBreakdown(q) : { discountSource: 'none', discountLabel: null, notice: null, autoApplied: false, credit: 0, creditAvailable: 0 }),
 })

@@ -12,6 +12,7 @@ export default function OfferBox({ live, className }) {
   const kinds = ['Coupon', teachers && 'teacher', referrals && 'friend'].filter(Boolean)
   const label = kinds.length === 1 ? 'Coupon code' : `${kinds.slice(0, -1).join(', ')} or ${kinds.at(-1)} code`
   const auto = !live.code.trim() && ['teacher', 'referral'].includes(quote?.discountSource)
+  const welcome = !live.code.trim() && quote?.autoApplied
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -59,6 +60,13 @@ export default function OfferBox({ live, className }) {
         <p className="flex items-center gap-2 rounded-xl bg-sage-50 px-4 py-2.5 text-sm font-medium text-sage-700">
           <Tag size={14} aria-hidden="true" />
           {quote.discountLabel} applied from your link
+        </p>
+      )}
+
+      {welcome && (
+        <p className="flex items-center gap-2 rounded-xl bg-sage-50 px-4 py-2.5 text-sm font-medium text-sage-700">
+          <Tag size={14} aria-hidden="true" />
+          {quote.discountLabel} applied automatically
         </p>
       )}
 

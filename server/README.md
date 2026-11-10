@@ -17,7 +17,7 @@ server/
     services/             storage, pdf (validation), watermark, documents (derived-copy cache), reader,
                           viewerSessions, entitlements, pricing (coupons), settlement, payments/, audit, mailer
   scripts/create-admin.js first admin / editor (prompts for a hidden password)
-  scripts/organize-catalog.js  JEE chapter order, hard-chapter prices, bundles and coupons (dry run first; see its header)
+  scripts/organize-catalog.js  JEE chapter order, the one note price, bundles and the welcome coupon (dry run first; see its header)
   tests/                  node:test + supertest + in-memory MongoDB (96 tests)
 ```
 

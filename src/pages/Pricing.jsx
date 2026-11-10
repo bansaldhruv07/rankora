@@ -50,7 +50,7 @@ export default function Pricing() {
               </span>
               <p className="mt-5 font-display text-5xl font-semibold">{fromPrice != null ? `From ${formatPrice(fromPrice)}` : 'Per chapter'}</p>
               <p className="mt-2 text-ink-600">Weak in one chapter? Buy just that note.</p>
-              <Bullets items={['Free sample on notes that offer one', 'Buy once and keep it', 'Add 2 or more to your cart and save 10% to 20%']} />
+              <Bullets items={['Free sample on notes that offer one', 'Buy once and keep it', 'Add several notes to your cart and pay once']} />
               <div className="mt-auto pt-8">
                 <Button to={ROUTES.notes} variant="outline" size="lg" className="w-full" iconRight={ArrowRight}>
                   Browse the notes

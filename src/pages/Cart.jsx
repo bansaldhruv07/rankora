@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Check, Info, ShoppingBag, Tag, Trash2 } from 'lucide-react'
+import { BookOpen, Check, Info, ShoppingBag, Trash2 } from 'lucide-react'
 import OfferBox from '../components/pricing/OfferBox'
 import ProductCover from '../components/store/ProductCover'
 import Button from '../components/ui/Button'
@@ -23,7 +23,7 @@ export default function Cart() {
   const [sandbox, setSandbox] = useState(false)
   const [bought, setBought] = useState(null)
 
-  // The server prices the cart (ownership, volume discount, the one discount code, store credit). This only displays
+  // The server prices the cart (ownership, the one discount that applies, store credit). This only displays
   // its answer, and a typed code is checked as the student types.
   const live = useLiveQuote({ path: '/cart/quote', base: { items: slugs }, enabled: slugs.length > 0, refreshKey: user?.id })
   const quote = live.quote
@@ -87,7 +87,7 @@ export default function Cart() {
   if (slugs.length === 0) {
     return (
       <section className="page-container py-16">
-        <EmptyState icon={ShoppingBag} title="Your cart is empty" description="Add a few notes and the more you buy together, the more you save.">
+        <EmptyState icon={ShoppingBag} title="Your cart is empty" description="Add the notes you want and pay for them together, once.">
           <Button to={ROUTES.notes} variant="accent">
             Browse notes
           </Button>
@@ -97,7 +97,6 @@ export default function Cart() {
   }
 
   const lines = (quote?.lines ?? []).filter((line) => slugs.includes(line.slug))
-  const next = quote?.nextTier
 
   return (
     <section className="page-container py-10 sm:py-14">
@@ -156,27 +155,11 @@ export default function Cart() {
           <Card className="p-6 sm:p-7">
             <h2 className="text-xl font-semibold">Order summary</h2>
 
-            {quote && (
-              <p className={`mt-4 flex gap-2.5 rounded-xl px-4 py-3 text-sm leading-relaxed ${quote.volumePercent > 0 ? 'bg-sage-50 text-sage-700' : 'bg-ivory-100 text-ink-700'}`}>
-                <Tag size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
-                <span>
-                  {quote.volumePercent > 0 && <strong>You&apos;re saving {quote.volumePercent}% for buying together. </strong>}
-                  {next ? `Add ${pluralize(next.needed, 'more note')} to save ${next.percent}%.` : quote.volumePercent > 0 ? 'That is our biggest discount.' : ''}
-                </span>
-              </p>
-            )}
-
             <dl className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-ink-600">Subtotal{quote ? ` · ${pluralize(quote.count, 'note')}` : ''}</dt>
                 <dd className="tabular font-semibold text-ink-900">{quote ? formatPrice(quote.list) : '…'}</dd>
               </div>
-              {quote?.volumeDiscount > 0 && (
-                <div className="flex justify-between gap-4 text-sage-700">
-                  <dt>Buying together ({quote.volumePercent}%)</dt>
-                  <dd className="tabular font-semibold">− {formatPrice(quote.volumeDiscount)}</dd>
-                </div>
-              )}
               {quote?.couponDiscount > 0 && (
                 <div className="flex justify-between gap-4 text-sage-700">
                   <dt>{quote.discountLabel ?? 'Discount'}</dt>

@@ -61,6 +61,10 @@ export const growth = {
   REFERRER_CREDIT: int(process.env.REFERRER_CREDIT, 5000), // paise of store credit for the referrer
   REFERRAL_MONTHLY_CAP: int(process.env.REFERRAL_MONTHLY_CAP, 10), // rewards one referrer can earn per calendar month
 
+  // The coupon applied automatically at checkout when no teacher code, friend discount or typed code is in play. It is
+  // an ordinary coupon in the database (Offers in the admin); this is only its code. Empty turns auto-apply off.
+  WELCOME_COUPON: (process.env.WELCOME_COUPON ?? 'WELCOME10').trim().toUpperCase(),
+
   // Gift cards. Every paying friend counts as 1; buying a pack in BIG_PACK_SLUGS counts as BIG_PACK_POINTS.
   GIFT_TIERS: readGiftTiers(process.env.REFERRAL_GIFT_TIERS),
   BIG_PACK_SLUGS: (process.env.BIG_PACK_SLUGS ?? 'jee-complete-pcm').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean),
