@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { assetUrl } from '../../lib/api'
 import { CLASS_LABELS } from '../../utils/format'
 import { cn } from '../../utils/cn'
+import { Wordmark } from '../common/Logo'
 import { coverTheme } from './coverTheme'
 
 // Large, quiet line art anchored bottom-right. Drawn in currentColor at low opacity.
@@ -83,8 +84,8 @@ export default function ProductCover({ product, className, compact = false }) {
             {kindLabel}
           </p>
         </div>
-        <p className="font-display font-semibold tracking-tight opacity-90" style={{ fontSize: '5.4cqw' }}>
-          JEEdge
+        <p className="opacity-90" style={{ fontSize: '5.4cqw' }}>
+          <Wordmark tone="onDark" />
         </p>
       </div>
       <Spine color={theme.spine} />

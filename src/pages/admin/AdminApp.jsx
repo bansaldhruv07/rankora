@@ -1,7 +1,7 @@
 import { lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { Activity, BarChart3, FileText, Gift, GraduationCap, LifeBuoy, LogOut, Menu, ReceiptText, Tag, Users, X } from 'lucide-react'
-import { LogoMark } from '../../components/common/Logo'
+import { LogoMark, Wordmark } from '../../components/common/Logo'
 import Button from '../../components/ui/Button'
 import { api } from '../../lib/api'
 import { cn } from '../../utils/cn'
@@ -103,7 +103,7 @@ function AdminLayout() {
         <div className="flex items-center gap-2.5 px-1.5 text-white">
           <LogoMark size={30} />
           <div>
-            <p className="font-display text-lg font-semibold leading-none">JEEdge</p>
+            <p className="text-lg leading-none"><Wordmark tone="onDark" /></p>
             <p className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-ember-400">Studio</p>
           </div>
         </div>
@@ -121,8 +121,8 @@ function AdminLayout() {
       </aside>
 
       <div className="sticky top-0 z-30 flex items-center justify-between bg-ink-900 px-4 py-3 text-white lg:hidden">
-        <span className="flex items-center gap-2.5 font-display text-lg font-semibold">
-          <LogoMark size={26} /> Studio
+        <span className="flex items-center gap-2.5 text-lg">
+          <LogoMark size={26} /> <Wordmark tone="onDark" /> <span className="font-display font-semibold">Studio</span>
         </span>
         <button type="button" onClick={() => setOpen((v) => !v)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} className="grid size-10 place-items-center rounded-full hover:bg-white/10">
           {open ? <X size={21} aria-hidden="true" /> : <Menu size={21} aria-hidden="true" />}

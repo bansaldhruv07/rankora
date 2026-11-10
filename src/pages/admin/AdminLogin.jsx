@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { LogoMark } from '../../components/common/Logo'
+import { LogoMark, Wordmark } from '../../components/common/Logo'
 import Button from '../../components/ui/Button'
 import { Field } from '../../components/admin/ui'
 import { useAdmin } from './adminContext'
@@ -31,7 +31,7 @@ export default function AdminLogin() {
         <div className="flex items-center gap-3">
           <LogoMark size={36} />
           <div>
-            <h1 className="font-display text-2xl font-semibold leading-none">JEEdge Studio</h1>
+            <h1 className="text-2xl leading-none"><Wordmark /> <span className="font-display font-semibold">Studio</span></h1>
             <p className="mt-1 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-ink-500">Staff sign-in</p>
           </div>
         </div>
