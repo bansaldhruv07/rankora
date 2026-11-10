@@ -10,7 +10,7 @@ import { cn } from '../../utils/cn'
 
 // Must match the volume tiers in server/src/services/pricing.js (CART_TIERS) and the coupons created by
 // server/scripts/organize-catalog.js.
-const CODE = 'WELCOME10'
+const CODE = 'WELCOME20'
 
 function CopyCode({ code }) {
   const [copied, setCopied] = useState(false)
@@ -124,10 +124,10 @@ export default function Offers() {
         <Reveal delay={180} className="h-full">
           <div className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6 shadow-soft">
             <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-sage-100 px-3 py-1 font-mono text-[0.7rem] font-bold uppercase tracking-wide text-sage-700">
-              First order
+              Student welcome offer
             </span>
-            <p className="mt-4 font-display text-4xl font-semibold leading-none sm:text-5xl">10% off</p>
-            <p className="mt-2 text-ink-600">Use this code at checkout on your first order.</p>
+            <p className="mt-4 font-display text-4xl font-semibold leading-none sm:text-5xl">20% off</p>
+            <p className="mt-2 text-ink-600">Use this code at checkout for an instant 20% discount on your order.</p>
             <div className="mt-auto">
               <CopyCode code={CODE} />
             </div>

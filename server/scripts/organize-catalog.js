@@ -75,9 +75,12 @@ const CHAPTERS = {
     { name: 'Redox Reactions', m: /redox reactions?/ },
     { name: 'General Organic Chemistry', m: /general organic|^goc/, hard: true },
     { name: 'Hydrocarbons', m: /hydrocarbon/ },
+    { name: 'Solid State', m: /solid state/ },
     { name: 'Solutions', m: /^solutions?/ },
     { name: 'Electrochemistry', m: /electrochem/, hard: true },
     { name: 'Chemical Kinetics', m: /kinetics/ },
+    { name: 'Surface Chemistry', m: /surface chem/ },
+    { name: 'Isolation of Elements (Metallurgy)', m: /metallurgy|isolation of elements/ },
     { name: 'd and f Block Elements', m: /d and f|d block|f block/ },
     { name: 'Coordination Compounds', m: /coordination/, hard: true },
     { name: 'Haloalkanes and Haloarenes', m: /halo/ },
@@ -85,9 +88,12 @@ const CHAPTERS = {
     { name: 'Aldehydes, Ketones and Carboxylic Acids', m: /aldehyde|ketone|carboxylic/, hard: true },
     { name: 'Amines', m: /amines?/ },
     { name: 'Biomolecules', m: /biomolecule/ },
+    { name: 'Salt Analysis', m: /salt analysis|qualitative analysis/ },
   ],
   mathematics: [
-    { name: 'Sets, Relations and Functions', m: /sets|relations|functions/ },
+    { name: 'Sets, Relations and Functions', m: /^sets|relations|^functions/ },
+    { name: 'Trigonometry', m: /^trigonometr|trigonometric (identities|ratios|equations)/ },
+    { name: 'Inverse Trigonometric Functions', m: /inverse trig/ },
     { name: 'Complex Numbers', m: /complex/, hard: true },
     { name: 'Quadratic Equations', m: /quadratic/ },
     { name: 'Sequences and Series', m: /sequences?|series/ },
@@ -97,6 +103,7 @@ const CHAPTERS = {
     { name: 'Limits, Continuity and Differentiability', m: /limits?|continuity|differentiab/ },
     { name: 'Application of Derivatives', m: /application of derivatives|^derivatives/, hard: true },
     { name: 'Integral Calculus', m: /integra/, hard: true },
+    { name: 'Area Under Curves', m: /area under|area between/ },
     { name: 'Differential Equations', m: /differential equations?/, hard: true },
     { name: 'Straight Lines', m: /straight lines?/ },
     { name: 'Circles', m: /circles?/ },
@@ -110,8 +117,9 @@ const CHAPTERS = {
 const SUBJECT_BASE = { physics: 100, chemistry: 1000, mathematics: 2000 }
 const STEP = 10
 
-// `price` / `mrp` (rupees) are fixed offers: a complete subject is ₹999 (worth about ₹1,499) and all three subjects
-// are ₹2,499. Bundles without a fixed price are `discount` (a fraction) below the sum of their notes' selling prices,
+// `price` / `mrp` (rupees) are fixed offers: Complete Physics is ₹999, Complete Chemistry ₹1,499, Complete Mathematics
+// ₹799 and all three subjects ₹3,500 (students get 20% off any of them with the WELCOME20 coupon). With no `mrp`, the
+// site shows the sum of the notes' own prices as the struck-through price, and only when that is higher. Bundles without a fixed price are `discount` (a fraction) below the sum of their notes' selling prices,
 // always more than the cart's own volume discount (10 / 15 / 20 %) so a bundle is worth buying.
 const BUNDLES = [
   { slug: 'physics-complete', subject: 'physics', classLevel: 'both', chapters: 'ALL', price: 999, mrp: 1499, sortOrder: 1,
@@ -136,10 +144,10 @@ const BUNDLES = [
     chapters: ['Electromagnetic Waves', 'Ray Optics', 'Wave Optics', 'Dual Nature of Radiation and Matter', 'Atoms and Nuclei', 'Semiconductor Electronics'],
     title: 'Optics and Modern Physics Pack',
     summary: 'Optics and modern physics chapters in one pack.' },
-  { slug: 'chemistry-complete', subject: 'chemistry', classLevel: 'both', chapters: 'ALL', price: 999, mrp: 1499, sortOrder: 7,
+  { slug: 'chemistry-complete', subject: 'chemistry', classLevel: 'both', chapters: 'ALL', price: 1499, sortOrder: 7,
     title: 'Complete Chemistry: Class 11 and 12',
     summary: 'Every Chemistry chapter in one pack, in book order. Revise the whole subject before JEE.' },
-  { slug: 'mathematics-complete', subject: 'mathematics', classLevel: 'both', chapters: 'ALL', price: 999, mrp: 1499, sortOrder: 8,
+  { slug: 'mathematics-complete', subject: 'mathematics', classLevel: 'both', chapters: 'ALL', price: 799, sortOrder: 8,
     title: 'Complete Mathematics: Class 11 and 12',
     summary: 'Every Mathematics chapter in one pack, in book order. Revise the whole subject before JEE.' },
   { slug: 'chemistry-toughest-chapters', subject: 'chemistry', classLevel: 'both', chapters: 'HARD', discount: 0.3, sortOrder: 10,
@@ -151,16 +159,18 @@ const BUNDLES = [
   { slug: 'jee-toughest-chapters', subject: 'mixed', classLevel: 'both', chapters: 'HARD_ALL', minSubjects: 2, discount: 0.3, sortOrder: 12,
     title: 'Toughest JEE Chapters Pack',
     summary: 'The hardest chapters from every subject, together at a lower price.' },
-  { slug: 'jee-complete-pcm', subject: 'mixed', classLevel: 'both', chapters: 'EVERYTHING', minSubjects: 3, price: 2499, mrp: 4497, sortOrder: 9,
+  { slug: 'jee-complete-pcm', subject: 'mixed', classLevel: 'both', chapters: 'EVERYTHING', minSubjects: 3, price: 3500, sortOrder: 9,
     title: 'Complete JEE: Physics, Chemistry and Mathematics',
     summary: 'Every chapter of all three subjects in one pack. The full syllabus, revised in time.' },
 ]
 
 // Real discounts only: no end date is invented. Add validUntil in the admin if you want one.
 const COUPONS = [
-  { code: 'WELCOME10', description: '10% off your first order', type: 'percent', value: 10, maxDiscountPaise: 10000, minOrderPaise: 0, perUserLimit: 1 },
+  { code: 'WELCOME20', description: '20% off your first order: the student welcome offer', type: 'percent', value: 20, minOrderPaise: 0, perUserLimit: 1 },
   { code: 'JEE15', description: '15% off orders of ₹499 or more', type: 'percent', value: 15, maxDiscountPaise: 25000, minOrderPaise: 49900, perUserLimit: 1 },
 ]
+// Replaced by WELCOME20. Switched off (not deleted) so old orders keep their record and nobody can stack both welcome codes.
+const RETIRED_COUPONS = ['WELCOME10']
 // ---------------------------------------------------------------------------------------------
 
 const norm = (title) => String(title ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -288,6 +298,9 @@ for (const spec of BUNDLES) {
     continue
   }
   const save = Math.round((1 - price / sum) * 100)
+  // Never sell a pack for more than its notes cost separately: hold it as a draft until more notes are published.
+  const held = spec.price != null && price > sum
+  if (held) console.log(`  ! ${spec.slug.padEnd(32)} HELD AS DRAFT: ${rupees(price)} is above the ${rupees(sum)} its ${picked.length} notes cost separately. Publish more notes, re-run, then publish the pack.`)
   console.log(`  + ${spec.slug.padEnd(32)} ${String(picked.length).padStart(2)} notes  ${rupees(sum)} separately -> ${rupees(price)}  (save ${save}%)  "${spec.title}"`)
   if (APPLY) {
     await Product.create({
@@ -302,8 +315,8 @@ for (const spec of BUNDLES) {
       pricePaise: price,
       ...(mrp != null ? { mrpPaise: mrp } : {}),
       premiumEligible: false,
-      status: 'published',
-      publishedAt: new Date(),
+      status: held ? 'draft' : 'published',
+      ...(held ? {} : { publishedAt: new Date() }),
       sortOrder: spec.sortOrder,
       bundleItems: ids,
       contents: picked.map((p) => p.hit.name).slice(0, 60),
@@ -333,6 +346,16 @@ for (const coupon of COUPONS) {
   if (APPLY && !exists) {
     await Coupon.create({ ...coupon, active: true })
     backup.couponsCreated.push(coupon.code)
+  }
+}
+
+for (const code of RETIRED_COUPONS) {
+  const old = await Coupon.findOne({ code })
+  if (!old) continue
+  console.log(`  ${old.active ? '-' : '='} ${code.padEnd(10)} ${old.active ? 'switched off (replaced by WELCOME20)' : 'already off'}`)
+  if (APPLY && old.active) {
+    await Coupon.updateOne({ _id: old._id }, { $set: { active: false } })
+    backup.couponsRetired = [...(backup.couponsRetired ?? []), code]
   }
 }
 
