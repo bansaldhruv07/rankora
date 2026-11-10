@@ -101,7 +101,7 @@ function AdminLayout() {
     <div className="min-h-screen bg-ivory-50 lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
       <aside className="hidden bg-ink-900 p-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <div className="flex items-center gap-2.5 px-1.5 text-white">
-          <LogoMark size={30} />
+          <LogoMark size={38} tone="onDark" />
           <div>
             <p className="text-lg leading-none"><Wordmark tone="onDark" /></p>
             <p className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.18em] text-ember-400">Studio</p>
@@ -122,7 +122,7 @@ function AdminLayout() {
 
       <div className="sticky top-0 z-30 flex items-center justify-between bg-ink-900 px-4 py-3 text-white lg:hidden">
         <span className="flex items-center gap-2.5 text-lg">
-          <LogoMark size={26} /> <Wordmark tone="onDark" /> <span className="font-display font-semibold">Studio</span>
+          <LogoMark size={30} tone="onDark" /> <Wordmark tone="onDark" /> <span className="font-display font-semibold">Studio</span>
         </span>
         <button type="button" onClick={() => setOpen((v) => !v)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} className="grid size-10 place-items-center rounded-full hover:bg-white/10">
           {open ? <X size={21} aria-hidden="true" /> : <Menu size={21} aria-hidden="true" />}

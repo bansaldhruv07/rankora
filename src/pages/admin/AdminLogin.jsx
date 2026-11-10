@@ -29,7 +29,7 @@ export default function AdminLogin() {
     <main className="grid min-h-screen place-items-center bg-ink-900 px-5 py-10">
       <div className="w-full max-w-sm rounded-3xl bg-ivory-50 p-8 shadow-lift">
         <div className="flex items-center gap-3">
-          <LogoMark size={36} />
+          <LogoMark size={46} />
           <div>
             <h1 className="text-2xl leading-none"><Wordmark /> <span className="font-display font-semibold">Studio</span></h1>
             <p className="mt-1 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-ink-500">Staff sign-in</p>
