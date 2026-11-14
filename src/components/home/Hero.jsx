@@ -83,19 +83,18 @@ function FounderPill() {
   )
 }
 
-// Appears over the bottom of a poster when it is hovered or focused (hover-capable screens only; on touch the poster
-// simply opens the pack page, which has the same price and Add to cart).
+// Always shown over the bottom of a poster: the price and Add to cart.
 function PosterBuy({ bundle }) {
   const { access } = useAuth()
   const owned = access.productSlugs.includes(bundle.slug)
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-2 flex-col gap-1.5 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-2.5 pt-10 opacity-0 transition duration-300 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 [@media(hover:none)]:hidden">
+    <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-1.5 pt-8 sm:gap-1.5 sm:p-2.5 sm:pt-10">
       <p className="flex flex-wrap items-baseline gap-x-2 text-white">
-        <span className="tabular font-display text-lg font-semibold leading-none">{formatPrice(bundle.price)}</span>
+        <span className="tabular font-display text-sm font-semibold leading-none sm:text-lg">{formatPrice(bundle.price)}</span>
         {bundle.savings && (
           <>
-            <s className="tabular text-xs text-white/60">{formatPrice(bundle.savings.referencePrice)}</s>
-            <span className="rounded-full bg-sage-500 px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none text-white">Save {bundle.savings.percent}%</span>
+            <s className="tabular hidden text-xs text-white/60 sm:inline">{formatPrice(bundle.savings.referencePrice)}</s>
+            <span className="hidden rounded-full bg-sage-500 px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none text-white sm:inline">Save {bundle.savings.percent}%</span>
           </>
         )}
       </p>
@@ -104,13 +103,13 @@ function PosterBuy({ bundle }) {
           In your library
         </Button>
       ) : (
-        <AddToCartButton slug={bundle.slug} size="sm" variant="accent" className="w-full" />
+        <AddToCartButton slug={bundle.slug} size="sm" variant="accent" className="w-full gap-1 px-1 text-xs sm:gap-2 sm:px-4 sm:text-sm" />
       )}
     </div>
   )
 }
 
-// The three subject packs as a fanned stack of posters. Each opens its pack; hover shows the price and Add to cart.
+// The three subject packs as a fanned stack of posters. Each opens its pack and carries its price and Add to cart.
 function PosterFan({ bySlug }) {
   return (
     <div className="relative mx-auto aspect-[1/0.64] w-full max-w-md lg:max-w-none">
