@@ -3,6 +3,7 @@ import { after, before, beforeEach, describe, it } from 'node:test'
 import { adminAgent, buy, client, makeProduct, openReader, registerUser, resetDb, staffAgent, startDb, stopDb } from './helpers.js'
 
 const { Product } = await import('../src/models/Product.js')
+const { extendBundleBuyers } = await import('../src/services/entitlements.js')
 const { Order } = await import('../src/models/Order.js')
 const { Coupon } = await import('../src/models/Coupon.js')
 const { Entitlement } = await import('../src/models/Entitlement.js')
@@ -332,6 +333,56 @@ describe('cart', () => {
     const order = await Order.findById(created.body.data.order.id)
     assert.equal(order.discountPaise, 0)
     assert.equal(order.listAmountPaise, 30000)
+  })
+
+  describe('packs in the cart', () => {
+    const pack = async (slug, price, noteSlugs) => {
+      const ids = (await Product.find({ slug: { $in: noteSlugs } })).map((n) => n._id)
+      return makeProduct({ slug, kind: 'bundle', price, bundleItems: ids })
+    }
+
+    it('prices a pack in the cart and does not charge again for notes it already contains', async () => {
+      await notes(3)
+      await pack('pk', 150, ['n1', 'n2'])
+      const q = await quoteOf(client(), ['pk', 'n1', 'n3'])
+      assert.deepEqual(q.covered, ['n1'])
+      assert.deepEqual(q.lines.map((l) => l.slug), ['pk', 'n3'])
+      assert.equal(q.total, 250) // pack 150 + n3 100, n1 is inside the pack
+      assert.equal(q.discount, 0)
+    })
+
+    it('sells a pack and a note together as one order, opens the notes, and keeps the pack growing', async () => {
+      await notes(4)
+      const bundle = await pack('pk', 150, ['n1', 'n2'])
+      const { agent } = await registerUser()
+      const { created, verified } = await payCart(agent, ['pk', 'n3'])
+      assert.equal(created.status, 201)
+      assert.equal(created.body.data.order.kind, 'cart')
+      assert.equal(created.body.data.order.amount, 250)
+      assert.equal(verified.status, 200)
+      for (const slug of ['n1', 'n2', 'n3']) assert.equal((await openReader(agent, slug)).status, 201, slug)
+      assert.equal((await openReader(agent, 'n4')).status, 403)
+      const access = (await agent.get('/api/library')).body.data.access.productSlugs
+      assert.ok(access.includes('pk'), 'the pack shows as owned')
+
+      // A note the admin adds to the pack later is given to this buyer too.
+      await extendBundleBuyers(bundle._id, [(await Product.findOne({ slug: 'n4' }))._id])
+      assert.equal((await openReader(agent, 'n4')).status, 201)
+      // And the pack is now left out of a new cart as already owned.
+      const again = await quoteOf(agent, ['pk'])
+      assert.deepEqual(again.owned, ['pk'])
+      assert.equal(again.count, 0)
+    })
+
+    it('a cart that ends up with only one pack is an ordinary pack order', async () => {
+      await notes(2)
+      await pack('pk', 150, ['n1', 'n2'])
+      const { agent } = await registerUser()
+      const created = await agent.post('/api/orders').send({ items: ['pk', 'n1', 'n2'] })
+      assert.equal(created.status, 201)
+      assert.equal(created.body.data.order.kind, 'bundle')
+      assert.equal(created.body.data.order.amount, 150)
+    })
   })
 
   it('ignores prices sent by the client and refuses a mixed or empty request', async () => {

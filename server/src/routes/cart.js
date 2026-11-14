@@ -16,11 +16,12 @@ router.post(
   optionalAuth,
   asyncHandler(async (req, res) => {
     const { items, coupon, useCredit } = parse(z.object({ items: cartItemsSchema, coupon: z.string().trim().max(30).optional(), useCredit: z.boolean().optional() }), req.body ?? {})
-    const { products, owned, unavailable } = await loadCart(items, req.user?._id)
+    const { products, owned, covered, unavailable } = await loadCart(items, req.user?._id)
     const priced = products.length ? await quoteCart({ products, code: coupon, user: req.user, attribution: readAttribution(req), useCredit }) : null
     ok(res, {
       lines: products.map((p) => p.toPublic()),
       owned,
+      covered,
       unavailable,
       count: products.length,
       ...cartQuoteToPublic(priced),

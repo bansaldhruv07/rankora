@@ -13,8 +13,10 @@ const entitlementSchema = new mongoose.Schema(
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     scope: { type: String, enum: ['product', 'bundle', 'all-paid'], required: true },
     status: { type: String, enum: ['active', 'revoked'], default: 'active' },
-    // 'cart' marks a bundle-scope grant that came from several notes bought together, not from a bundle product.
+    // 'cart' marks a bundle-scope grant that came from several items bought together, not from a single bundle product.
     via: String,
+    // For a cart that held packs: the packs themselves, so notes added to them later reach this buyer and the pack shows as owned.
+    bundleRefs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     expiresAt: Date,
     revokedAt: Date,
     revokedReason: String,

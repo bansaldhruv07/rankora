@@ -136,7 +136,7 @@ router.post(
       // Notes the student already has are left out. A cart that ends up with one note is an ordinary single-note order.
       const cart = await loadCart(items, req.user._id)
       if (cart.products.length === 0) {
-        throw cart.owned.length ? conflict('You already have access to everything in this cart') : notFound('These notes are not available')
+        throw cart.owned.length ? conflict('You already have access to everything in this cart') : notFound('These items are not available')
       }
       if (cart.products.length > 1) return createCartOrder(req, res, cart.products, input)
       slug = cart.products[0].slug
