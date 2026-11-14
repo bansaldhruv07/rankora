@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, BookOpen, Check, Timer } from 'lucide-react'
 import AddToCartButton from '../cart/AddToCartButton'
-import PriceTag from '../store/PriceTag'
 import Button from '../ui/Button'
 import { useAuth } from '../../hooks/useAuth'
 import { useApi } from '../../hooks/useApi'
@@ -11,6 +10,7 @@ import { useSampleLink } from '../../hooks/useSampleLink'
 import { SITE, isLink } from '../../data/site'
 import { ROUTES, notePath } from '../../utils/routes'
 import { cn } from '../../utils/cn'
+import { formatPrice } from '../../utils/format'
 import { AtomArt, BulbArt, PencilArt, SparkleArt } from '../common/Clipart'
 
 const HIGHLIGHTS = ['Physics, Chemistry, Maths', 'Class 11, 12 & JEE droppers', 'Free sample', 'Instant access']
@@ -83,68 +83,53 @@ function FounderPill() {
   )
 }
 
-// The packs you can put straight in the cart from the home page: price, saving and Add to cart.
-const SHELF = [
-  { slug: 'physics-complete', label: 'Physics' },
-  { slug: 'chemistry-complete', label: 'Chemistry' },
-  { slug: 'mathematics-complete', label: 'Maths' },
-]
-
-function ShelfCard({ bundle, label, wide }) {
+// Appears over the bottom of a poster when it is hovered or focused (hover-capable screens only; on touch the poster
+// simply opens the pack page, which has the same price and Add to cart).
+function PosterBuy({ bundle }) {
   const { access } = useAuth()
   const owned = access.productSlugs.includes(bundle.slug)
   return (
-    <li className={cn('flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-3 shadow-soft', wide ? 'sm:col-span-3' : 'sm:flex-col sm:items-stretch sm:text-center')}>
-      <div className="min-w-0">
-        <Link to={notePath(bundle.slug)} className="text-sm font-semibold text-ink-900 underline-offset-4 hover:text-ember-600 hover:underline">
-          {label}
-        </Link>
-        <PriceTag product={bundle} className={wide ? undefined : 'sm:justify-center'} />
-      </div>
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-2 flex-col gap-1.5 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-2.5 pt-10 opacity-0 transition duration-300 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 [@media(hover:none)]:hidden">
+      <p className="flex flex-wrap items-baseline gap-x-2 text-white">
+        <span className="tabular font-display text-lg font-semibold leading-none">{formatPrice(bundle.price)}</span>
+        {bundle.savings && (
+          <>
+            <s className="tabular text-xs text-white/60">{formatPrice(bundle.savings.referencePrice)}</s>
+            <span className="rounded-full bg-sage-500 px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none text-white">Save {bundle.savings.percent}%</span>
+          </>
+        )}
+      </p>
       {owned ? (
-        <Button to={ROUTES.library} size="sm" variant="soft">
+        <Button to={ROUTES.library} size="sm" variant="soft" className="w-full">
           In your library
         </Button>
       ) : (
-        <AddToCartButton slug={bundle.slug} size="sm" variant="accent" className={cn('shrink-0', !wide && 'sm:w-full')} />
+        <AddToCartButton slug={bundle.slug} size="sm" variant="accent" className="w-full" />
       )}
-    </li>
+    </div>
   )
 }
 
-function PackShelf({ bySlug }) {
-  const cards = SHELF.map((item) => ({ ...item, bundle: bySlug.get(item.slug) })).filter((item) => item.bundle)
-  const jee = bySlug.get('jee-complete-pcm')
-  if (cards.length === 0 && !jee) return null
-  return (
-    <ul aria-label="Subject packs" className="mt-6 grid gap-2.5 sm:grid-cols-3">
-      {cards.map((item) => (
-        <ShelfCard key={item.slug} bundle={item.bundle} label={`Complete ${item.label}`} />
-      ))}
-      {jee && <ShelfCard bundle={jee} label="Complete JEE: all three subjects" wide />}
-    </ul>
-  )
-}
-
-// The three subject packs as a fanned stack of posters. Each opens its pack.
+// The three subject packs as a fanned stack of posters. Each opens its pack; hover shows the price and Add to cart.
 function PosterFan({ bySlug }) {
   return (
     <div className="relative mx-auto aspect-[1/0.64] w-full max-w-md lg:max-w-none">
       {POSTERS.map((poster) => {
         const bundle = bySlug.get(poster.slug)
         return (
-          <Link
+          <div
             key={poster.slug}
-            to={bundle ? notePath(poster.slug) : ROUTES.notes}
-            aria-label={bundle ? `${bundle.title}: see what is inside` : poster.alt}
             className={cn(
-              'hero-float group absolute top-1/2 w-[37%] -translate-y-1/2 overflow-hidden rounded-xl border border-line bg-ivory-200 shadow-lift transition-[rotate,scale,box-shadow] duration-500 hover:z-20 hover:shadow-[0_24px_50px_-12px_rgba(11,20,36,0.45)]',
+              'hero-float group absolute top-1/2 w-[37%] -translate-y-1/2 overflow-hidden rounded-xl border border-line bg-ivory-200 shadow-lift transition-[rotate,scale,box-shadow] duration-500 hover:z-20 focus-within:z-20 hover:shadow-[0_24px_50px_-12px_rgba(11,20,36,0.45)]',
               poster.place,
             )}
             style={{ '--d': `${poster.delay}ms` }}
           >
-            <img src={poster.image} alt={poster.alt} width="900" height="1125" fetchPriority="high" className="block aspect-[4/5] w-full object-cover" />
-          </Link>
+            <Link to={bundle ? notePath(poster.slug) : ROUTES.notes} aria-label={bundle ? `${bundle.title}: see what is inside` : poster.alt} className="block">
+              <img src={poster.image} alt={poster.alt} width="900" height="1125" fetchPriority="high" className="block aspect-[4/5] w-full object-cover" />
+            </Link>
+            {bundle && <PosterBuy bundle={bundle} />}
+          </div>
         )
       })}
     </div>
@@ -214,7 +199,6 @@ export default function Hero() {
 
         <div>
           <PosterFan bySlug={bySlug} />
-          <PackShelf bySlug={bySlug} />
         </div>
       </div>
     </section>
