@@ -7,7 +7,7 @@
 // What it does
 //   1. Matches each note to a chapter by its title and sets `chapter` and `sortOrder` to the NCERT book order
 //      (Class 11 then Class 12, Physics, then Chemistry, then Mathematics).
-//   2. Every note is priced the same: ₹99 selling, ₹199 original. Chapters marked `hard` below also get difficulty "Hard".
+//   2. Every note is priced the same: ₹79 selling, ₹149 original. Chapters marked `hard` below also get difficulty "Hard".
 //   3. Creates or extends bundles from the notes that exist. Bundles with a fixed price (BUNDLES below) are set to it;
 //      the others are a fixed % below the sum of the notes' selling prices and keep whatever price they have once
 //      they exist. Newly matching notes are added to existing bundles (and existing buyers get them).
@@ -28,8 +28,8 @@ const APPLY = process.argv.includes('--apply')
 // ---------------------------------------------------------------------------------------------
 // Settings you may want to change
 // ---------------------------------------------------------------------------------------------
-const NOTE_PRICE = 99 // selling price of every chapter (rupees)
-const NOTE_MRP = 199 // original price shown struck through
+const NOTE_PRICE = 79 // selling price of every chapter (rupees)
+const NOTE_MRP = 149 // original price shown struck through
 
 // `m` is matched against the note title (lower case, punctuation turned into spaces). `hard` marks the chapters
 // students find toughest. Order in each list = book order.
@@ -116,12 +116,13 @@ const CHAPTERS = {
 const SUBJECT_BASE = { physics: 100, chemistry: 1000, mathematics: 2000 }
 const STEP = 10
 
-// `price` / `mrp` (rupees) are fixed offers: Complete Physics and Complete Chemistry are ₹1,499 each, Complete
-// Mathematics ₹999 and all three subjects ₹3,499. With no `mrp`, the site shows the sum of the notes' own prices as the
+// `price` / `mrp` (rupees) are fixed offers: Complete Physics ₹799, Complete Chemistry ₹999, Complete Mathematics ₹599
+// and all three subjects ₹2,499 (no welcome coupon on that one; only a teacher code discounts it). `pitch` packs also get
+// the selling copy below, written from the notes they actually contain. With no `mrp`, the site shows the sum of the notes' own prices as the
 // struck-through price, and only when that is higher. Bundles without a fixed price are `discount` (a fraction) below the sum of their notes' selling prices,
 // always more than the cart's own volume discount (10 / 15 / 20 %) so a bundle is worth buying.
 const BUNDLES = [
-  { slug: 'physics-complete', subject: 'physics', classLevel: 'both', chapters: 'ALL', price: 1499, sortOrder: 1,
+  { slug: 'physics-complete', subject: 'physics', classLevel: 'both', chapters: 'ALL', pitch: true, price: 799, sortOrder: 1,
     title: 'Complete Physics: Class 11 and 12',
     summary: 'Every Physics chapter in one pack, in book order. Revise the whole subject before JEE.' },
   { slug: 'physics-toughest-chapters', subject: 'physics', classLevel: 'both', chapters: 'HARD', discount: 0.3, sortOrder: 2,
@@ -143,10 +144,10 @@ const BUNDLES = [
     chapters: ['Electromagnetic Waves', 'Ray Optics', 'Wave Optics', 'Dual Nature of Radiation and Matter', 'Atoms and Nuclei', 'Semiconductor Electronics'],
     title: 'Optics and Modern Physics Pack',
     summary: 'Optics and modern physics chapters in one pack.' },
-  { slug: 'chemistry-complete', subject: 'chemistry', classLevel: 'both', chapters: 'ALL', price: 1499, sortOrder: 7,
+  { slug: 'chemistry-complete', subject: 'chemistry', classLevel: 'both', chapters: 'ALL', pitch: true, price: 999, sortOrder: 7,
     title: 'Complete Chemistry: Class 11 and 12',
     summary: 'Every Chemistry chapter in one pack, in book order. Revise the whole subject before JEE.' },
-  { slug: 'mathematics-complete', subject: 'mathematics', classLevel: 'both', chapters: 'ALL', price: 999, sortOrder: 8,
+  { slug: 'mathematics-complete', subject: 'mathematics', classLevel: 'both', chapters: 'ALL', pitch: true, price: 599, sortOrder: 8,
     title: 'Complete Mathematics: Class 11 and 12',
     summary: 'Every Mathematics chapter in one pack, in book order. Revise the whole subject before JEE.' },
   { slug: 'chemistry-toughest-chapters', subject: 'chemistry', classLevel: 'both', chapters: 'HARD', discount: 0.3, sortOrder: 10,
@@ -158,7 +159,7 @@ const BUNDLES = [
   { slug: 'jee-toughest-chapters', subject: 'mixed', classLevel: 'both', chapters: 'HARD_ALL', minSubjects: 2, discount: 0.3, sortOrder: 12,
     title: 'Toughest JEE Chapters Pack',
     summary: 'The hardest chapters from every subject, together at a lower price.' },
-  { slug: 'jee-complete-pcm', subject: 'mixed', classLevel: 'both', chapters: 'EVERYTHING', minSubjects: 3, price: 3499, sortOrder: 9,
+  { slug: 'jee-complete-pcm', subject: 'mixed', classLevel: 'both', chapters: 'EVERYTHING', minSubjects: 3, pitch: true, price: 2499, sortOrder: 9,
     title: 'Complete JEE: Physics, Chemistry and Mathematics',
     summary: 'Every chapter of all three subjects in one pack. The full syllabus, revised in time.' },
 ]
@@ -172,6 +173,37 @@ const COUPONS = [
 // No other coupons are offered. Switched off (not deleted) so old orders keep their record.
 const RETIRED_COUPONS = ['WELCOME20', 'JEE15']
 // ---------------------------------------------------------------------------------------------
+
+const SUBJECT_LABEL = { physics: 'Physics', chemistry: 'Chemistry', mathematics: 'Mathematics', mixed: 'Physics, Chemistry and Mathematics' }
+
+// What a buyer is told about a complete pack. Counts come from the notes in it, so the page can never overstate them.
+function pitchFor(spec, picked) {
+  const n = picked.length
+  const subject = SUBJECT_LABEL[spec.subject] ?? 'JEE'
+  const whole = spec.subject === 'mixed'
+  const classes = new Set(picked.map((p) => p.note.classLevel))
+  const classText = classes.has('both') || (classes.has('11') && classes.has('12')) ? 'Class 11 and Class 12' : classes.has('11') ? 'Class 11' : 'Class 12'
+  const chapters = `${n} chapter ${n === 1 ? 'note' : 'notes'}`
+  return {
+    summary: whole
+      ? `The full JEE syllabus in one pack: ${chapters} across Physics, Chemistry and Mathematics for ${classText}. Revise everything without relearning it from scratch.`
+      : `Every ${subject} chapter for ${classText} in one pack: ${chapters} in book order. Revise the whole subject without relearning it from scratch.`,
+    description: [
+      `You get ${chapters} covering ${whole ? 'Physics, Chemistry and Mathematics' : subject} for ${classText}, in the order of the books. Each note is short and to the point, so you can revise a chapter in minutes instead of reading the whole textbook again.`,
+      `Why it saves you time: the concepts are already picked out and written down, so you do not have to learn the whole syllabus again before the exam. Open a chapter, revise it, move to the next.`,
+      `Written and used by an IIT Delhi student in her own JEE preparation. Made for students in Class 11, Class 12 and droppers.`,
+      `One payment, and every note in the pack is yours to read in the JEEdge reader on your phone or laptop. Chapters added to this pack later unlock automatically.`,
+    ].join('\n\n'),
+    includes: [
+      `${chapters}, ${classText}`,
+      'Short notes: revise a chapter in minutes',
+      'Read online on phone or laptop, your page is remembered',
+      'Pay once and keep it. New chapters added to the pack unlock automatically',
+      'Written and used by an IIT Delhi student',
+    ],
+    audience: ['Class 11 and Class 12 students', 'Droppers revising the whole syllabus', 'Anyone who wants to revise without relearning everything'],
+  }
+}
 
 const norm = (title) => String(title ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 const rupees = (paise) => `₹${paise / 100}`
@@ -278,14 +310,22 @@ for (const spec of BUNDLES) {
     const added = ids.filter((id) => !have.has(String(id)))
     // Only bundles with a fixed offer are repriced; the rest keep whatever price they have.
     const repriced = spec.price != null && (existing.pricePaise !== price || (existing.mrpPaise ?? null) !== (mrp ?? null))
+    const copy = spec.pitch ? pitchFor(spec, picked) : null
+    const contents = picked.map((p) => p.hit.name).slice(0, 60)
+    const sameList = (a, b) => JSON.stringify(a ?? []) === JSON.stringify(b ?? [])
+    // A complete pack that was held back as a draft goes on sale once its notes are worth more than its price.
+    const publish = Boolean(spec.pitch) && existing.status === 'draft' && picked.length >= 2 && price <= sum
+    const copyChanged = Boolean(copy) && !(existing.summary === copy.summary && existing.description === copy.description && sameList(existing.includes, copy.includes) && sameList(existing.audience, copy.audience) && sameList(existing.contents, contents))
     console.log(
       `  = ${spec.slug.padEnd(32)} exists (${existing.bundleItems.length} notes, ${rupees(existing.pricePaise)})` +
         `${repriced ? `, price -> ${rupees(price)}${mrp != null ? ` (worth ${rupees(mrp)})` : ''}` : ''}` +
-        `${added.length ? `, would add ${added.length} new ${added.length === 1 ? 'note' : 'notes'}` : ''}${!repriced && !added.length ? ', up to date' : ''}`,
+        `${added.length ? `, would add ${added.length} new ${added.length === 1 ? 'note' : 'notes'}` : ''}${copyChanged ? ', selling copy refreshed' : ''}${publish ? ', PUBLISHED (its notes are now worth more than its price)' : ''}${!repriced && !added.length && !copyChanged && !publish ? ', up to date' : ''}`,
     )
-    if (APPLY && (added.length || repriced)) {
+    if (APPLY && (added.length || repriced || copyChanged || publish)) {
       const $set = {}
       const $unset = {}
+      if (publish) Object.assign($set, { status: 'published', publishedAt: new Date() })
+      if (copyChanged) Object.assign($set, { summary: copy.summary, description: copy.description, includes: copy.includes, audience: copy.audience, contents })
       if (added.length) $set.bundleItems = [...existing.bundleItems, ...added]
       if (repriced) {
         $set.pricePaise = price
@@ -294,10 +334,11 @@ for (const spec of BUNDLES) {
       }
       await Product.updateOne({ _id: existing._id }, { $set, ...(Object.keys($unset).length ? { $unset } : {}) })
       if (added.length) await extendBundleBuyers(existing._id, added)
-      backup.bundlesExtended.push({ slug: spec.slug, added: added.map(String), before: repriced ? { pricePaise: existing.pricePaise, mrpPaise: existing.mrpPaise ?? null } : undefined })
+      backup.bundlesExtended.push({ slug: spec.slug, published: publish || undefined, added: added.map(String), before: repriced ? { pricePaise: existing.pricePaise, mrpPaise: existing.mrpPaise ?? null } : undefined })
     }
     continue
   }
+  const copy = spec.pitch ? pitchFor(spec, picked) : null
   const save = Math.round((1 - price / sum) * 100)
   // Never sell a pack for more than its notes cost separately: hold it as a draft until more notes are published.
   const held = spec.price != null && price > sum
@@ -307,8 +348,8 @@ for (const spec of BUNDLES) {
     await Product.create({
       slug: spec.slug,
       title: spec.title,
-      summary: spec.summary,
-      description: `${spec.summary}\n\nOne payment, and every note in the pack is yours to read in the JEEdge reader.`,
+      summary: copy?.summary ?? spec.summary,
+      description: copy?.description ?? `${spec.summary}\n\nOne payment, and every note in the pack is yours to read in the JEEdge reader.`,
       kind: 'bundle',
       type: 'bundle',
       subject: spec.subject,
@@ -321,7 +362,8 @@ for (const spec of BUNDLES) {
       sortOrder: spec.sortOrder,
       bundleItems: ids,
       contents: picked.map((p) => p.hit.name).slice(0, 60),
-      includes: ['Read online in the JEEdge reader, on phone or laptop', 'Chapters added to this pack later unlock automatically'],
+      includes: copy?.includes ?? ['Read online in the JEEdge reader, on phone or laptop', 'Chapters added to this pack later unlock automatically'],
+      ...(copy ? { audience: copy.audience } : {}),
     })
     backup.bundlesCreated.push(spec.slug)
   }

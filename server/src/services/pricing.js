@@ -55,8 +55,9 @@ export async function resolveCoupon({ code, userId, product, productIds = [produ
 }
 
 // The welcome coupon, when it can be used by this user on this order; otherwise null (never an error, it is automatic).
-async function usableWelcomeCoupon({ userId, productIds, pricePaise }) {
+async function usableWelcomeCoupon({ userId, productIds, pricePaise, slugs = [] }) {
   if (!growth.WELCOME_COUPON) return null
+  if (slugs.some((slug) => growth.WELCOME_EXCLUDED_SLUGS.includes(String(slug).toLowerCase()))) return null
   try {
     return await resolveCoupon({ code: growth.WELCOME_COUPON, userId, productIds, pricePaise })
   } catch (err) {
@@ -67,7 +68,7 @@ async function usableWelcomeCoupon({ userId, productIds, pricePaise }) {
 
 // The one discount source plus optional store credit, applied to `basePaise`.
 // Which source wins is decided in growth/discounts.js; this turns it into rupees.
-async function applySource({ basePaise, productIds, code, user, attribution, useCredit }) {
+async function applySource({ basePaise, productIds, slugs, code, user, attribution, useCredit }) {
   const decision = await classifyCode({ code, user, attribution })
   let coupon = null
   let discountPaise = 0
@@ -86,7 +87,7 @@ async function applySource({ basePaise, productIds, code, user, attribution, use
     label = 'Friend discount'
   } else {
     // Nothing else applies, so the welcome offer does, without the student typing anything.
-    coupon = await usableWelcomeCoupon({ userId: user?._id, productIds, pricePaise: basePaise })
+    coupon = await usableWelcomeCoupon({ userId: user?._id, productIds, pricePaise: basePaise, slugs })
     if (coupon) {
       discountPaise = discountFor(coupon, basePaise)
       label = `Welcome offer ${coupon.code}`
@@ -117,14 +118,14 @@ async function applySource({ basePaise, productIds, code, user, attribution, use
 // Prices a cart of notes: the list total, then the one discount source, then store credit.
 export async function quoteCart({ products, code, user, attribution, useCredit }) {
   const listPaise = products.reduce((sum, p) => sum + p.pricePaise, 0)
-  const applied = await applySource({ basePaise: listPaise, productIds: products.map((p) => p._id), code, user, attribution, useCredit })
+  const applied = await applySource({ basePaise: listPaise, productIds: products.map((p) => p._id), slugs: products.map((p) => p.slug), code, user, attribution, useCredit })
   return { ...applied, listPaise, couponDiscountPaise: applied.codeDiscountPaise, discountPaise: applied.codeDiscountPaise }
 }
 
 // The single place a price is decided. Callers never pass amounts in.
 export async function quote({ product, code, user, attribution, useCredit }) {
   const listPaise = product.pricePaise
-  const applied = await applySource({ basePaise: listPaise, productIds: [product._id], code, user, attribution, useCredit })
+  const applied = await applySource({ basePaise: listPaise, productIds: [product._id], slugs: [product.slug], code, user, attribution, useCredit })
   return { ...applied, listPaise, discountPaise: applied.codeDiscountPaise }
 }
 

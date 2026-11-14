@@ -33,20 +33,20 @@ function readMilestones(raw) {
   }
 }
 
-// Refer-and-earn gift cards. A student whose friends reach `friends` (counted below) unlocks a gift card worth
-// `percent`% of what those friends paid since the previous gift. An admin approves and sends each one by hand.
+// Refer-and-earn gift cards. A student whose friends reach `friends` (counted below) unlocks a gift card worth a fixed
+// `valuePaise`. An admin approves and sends each one by hand.
 export const DEFAULT_GIFT_TIERS = [
-  { friends: 10, percent: 10 },
-  { friends: 25, percent: 10 },
-  { friends: 50, percent: 10 },
+  { friends: 5, valuePaise: 50000 },
+  { friends: 10, valuePaise: 150000 },
+  { friends: 25, valuePaise: 500000 },
 ]
 
 function readGiftTiers(raw) {
   if (!raw) return DEFAULT_GIFT_TIERS
   try {
     const list = JSON.parse(raw)
-    const valid = Array.isArray(list) && list.length > 0 && list.every((t) => Number.isInteger(t.friends) && t.friends > 0 && Number.isInteger(t.percent) && t.percent >= 0 && t.percent <= 100)
-    return valid ? list.map((t) => ({ friends: t.friends, percent: t.percent })).sort((a, b) => a.friends - b.friends) : DEFAULT_GIFT_TIERS
+    const valid = Array.isArray(list) && list.length > 0 && list.every((t) => Number.isInteger(t.friends) && t.friends > 0 && Number.isInteger(t.valuePaise) && t.valuePaise >= 0)
+    return valid ? list.map((t) => ({ friends: t.friends, valuePaise: t.valuePaise })).sort((a, b) => a.friends - b.friends) : DEFAULT_GIFT_TIERS
   } catch {
     return DEFAULT_GIFT_TIERS
   }
@@ -65,10 +65,14 @@ export const growth = {
   // an ordinary coupon in the database (Offers in the admin); this is only its code. Empty turns auto-apply off.
   WELCOME_COUPON: (process.env.WELCOME_COUPON ?? 'WELCOME10').trim().toUpperCase(),
 
-  // Gift cards. Every paying friend counts as 1; buying a pack in BIG_PACK_SLUGS counts as BIG_PACK_POINTS.
+  // Gift cards count only complete-subject packs: a friend who buys one (SUBJECT_PACK_SLUGS) counts as 1, and a friend
+  // who buys the whole JEE pack (BIG_PACK_SLUGS) counts as BIG_PACK_POINTS. Single notes and topic packs count as 0.
   GIFT_TIERS: readGiftTiers(process.env.REFERRAL_GIFT_TIERS),
+  SUBJECT_PACK_SLUGS: (process.env.SUBJECT_PACK_SLUGS ?? 'physics-complete,chemistry-complete,mathematics-complete').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean),
   BIG_PACK_SLUGS: (process.env.BIG_PACK_SLUGS ?? 'jee-complete-pcm').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean),
   BIG_PACK_POINTS: int(process.env.BIG_PACK_POINTS, 3),
+  // The welcome coupon is not applied to these (the whole-JEE pack is sold at one price; only a teacher code discounts it).
+  WELCOME_EXCLUDED_SLUGS: (process.env.WELCOME_EXCLUDED_SLUGS ?? 'jee-complete-pcm').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean),
 
   // Offline teachers
   TEACHER_STUDENT_DISCOUNT_PERCENT: int(process.env.TEACHER_STUDENT_DISCOUNT_PERCENT, 15),
@@ -76,7 +80,8 @@ export const growth = {
   MILESTONES: readMilestones(process.env.TEACHER_MILESTONES),
 
   // Shared
-  REFUND_WINDOW_DAYS: int(process.env.REFUND_WINDOW_DAYS, 7),
+  // There are no refunds, so rewards, commissions and gift cards are final at once. Set above 0 only to hold them back.
+  REFUND_WINDOW_DAYS: int(process.env.REFUND_WINDOW_DAYS, 0),
   ATTRIBUTION_DAYS: int(process.env.ATTRIBUTION_DAYS, 30), // how long a /?t= or /?ref= link is remembered
 }
 

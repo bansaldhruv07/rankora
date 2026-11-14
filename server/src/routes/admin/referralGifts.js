@@ -17,8 +17,6 @@ const giftView = (g) => ({
   id: String(g._id),
   student: g.referrer?._id ? { id: String(g.referrer._id), name: g.referrer.name, email: g.referrer.email } : { id: String(g.referrer) },
   tier: g.tier,
-  percent: g.percent,
-  basis: g.basisPaise / 100,
   value: g.valuePaise / 100,
   status: g.status,
   reachedAt: g.reachedAt,

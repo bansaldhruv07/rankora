@@ -211,6 +211,30 @@ describe('admin content management', () => {
     assert.equal(bad.status, 201, 'a malformed encoded name must not crash the server')
   })
 
+  it('sets the free sample for many notes at once, always keeping a page locked', async () => {
+    const admin = await adminAgent()
+    await makeProduct({ slug: 's1', pages: 5 })
+    await makeProduct({ slug: 's2', pages: 3, previewPages: [3] })
+    await makeProduct({ slug: 's3', pages: 1 })
+    const first = await admin.post('/api/admin/products/sample-pages').send({ count: 2, scope: 'empty' })
+    assert.equal(first.status, 200)
+    assert.deepEqual(first.body.data, { changed: 1, total: 3 }) // s1 only: s2 already had one, s3 has a single page
+    assert.deepEqual((await Product.findOne({ slug: 's1' })).previewPages, [1, 2])
+    assert.deepEqual((await Product.findOne({ slug: 's2' })).previewPages, [3])
+    const all = await admin.post('/api/admin/products/sample-pages').send({ count: 10, scope: 'all' })
+    assert.equal(all.status, 200)
+    assert.deepEqual((await Product.findOne({ slug: 's1' })).previewPages, [1, 2, 3, 4]) // never the whole 5 pages
+    assert.deepEqual((await Product.findOne({ slug: 's2' })).previewPages, [1, 2])
+    assert.deepEqual((await Product.findOne({ slug: 's3' })).previewPages, [])
+    assert.equal((await admin.post('/api/admin/products/sample-pages').send({ count: 0 })).status, 200)
+    assert.deepEqual((await Product.findOne({ slug: 's1' })).previewPages, [])
+    assert.equal((await admin.post('/api/admin/products/sample-pages').send({ count: -1 })).status, 400)
+    assert.equal((await client().post('/api/admin/products/sample-pages').send({ count: 1 })).status, 401)
+    // A single note can now be given a longer sample than 30 pages.
+    const long = await admin.patch(`/api/admin/products/${(await Product.findOne({ slug: 's1' }))._id}`).send({ previewPages: [1, 2, 3, 4] })
+    assert.equal(long.status, 200)
+  })
+
   it('edits metadata and validates prices', async () => {
     const admin = await adminAgent()
     const { id } = (await upload(admin, await samplePdf(3))).body.data

@@ -1,9 +1,11 @@
-import { refundWindowMs } from '../../config/growth.js'
+import { growth, refundWindowMs } from '../../config/growth.js'
 import { Order } from '../../models/Order.js'
+import { Referral } from '../../models/Referral.js'
 import { TeacherAdjustment } from '../../models/TeacherAdjustment.js'
 import { refundSpend } from './credit.js'
 import { evaluateMilestones } from './milestones.js'
-import { onReferredOrderConfirmed, reverseReferralForOrder } from './referrals.js'
+import { evaluateGifts } from './referralGifts.js'
+import { onReferredOrderConfirmed, releaseDueRewards, reverseReferralForOrder } from './referrals.js'
 
 // Commission is a percentage of what the student actually paid, rounded down to a whole paisa.
 export const commissionFor = (amountPaise, percent) => Math.floor((amountPaise * (percent ?? 0)) / 100)
@@ -27,6 +29,13 @@ export async function onSaleConfirmed(orderId, now = new Date()) {
   await recordTeacherSale(order)
   await onReferredOrderConfirmed(order, now)
   if (order.teacherId) await evaluateMilestones(order.teacherId, now)
+  // With no refund window there is nothing to wait for: credit, commission and gift cards are final straight away.
+  if (growth.REFUND_WINDOW_DAYS === 0) {
+    await releaseDueRewards(now)
+    await releaseDueCommissions(now)
+    const referral = await Referral.findOne({ referred: order.user }).select('referrer')
+    if (referral) await evaluateGifts(referral.referrer, now)
+  }
   return order
 }
 

@@ -4,57 +4,45 @@ import { Referral } from '../../models/Referral.js'
 import { ReferralGift } from '../../models/ReferralGift.js'
 import { conflict, notFound } from '../../utils/AppError.js'
 
-// Gift cards for students whose friends keep buying. A friend counts once, through their first paid order, once the
-// refund window has passed and the order was not refunded. One pack counts as 1; the all-subjects pack counts more.
+// Gift cards for students whose friends buy full subjects. A friend counts through their FIRST paid order only (that is the
+// one the referral is tied to): 1 point for a complete-subject pack, BIG_PACK_POINTS for the whole-JEE pack, and nothing
+// for a single note or a topic pack. Each tier has a fixed gift value.
 
-const ELIGIBLE_REFERRALS = ['granted', 'capped'] // capped = paid through the link but past the monthly credit cap
+const COUNTED_REFERRALS = ['pending', 'granted', 'capped'] // capped = paid through the link but past the monthly credit cap
 
 const slugsOf = (order) => [order.productSlug, ...(order.items ?? []).map((item) => item.slug)].filter(Boolean).map((slug) => slug.toLowerCase())
 
 // How many "friends" this order is worth.
 export function pointsForOrder(order) {
-  return slugsOf(order).some((slug) => growth.BIG_PACK_SLUGS.includes(slug)) ? growth.BIG_PACK_POINTS : 1
+  const slugs = slugsOf(order)
+  if (slugs.some((slug) => growth.BIG_PACK_SLUGS.includes(slug))) return growth.BIG_PACK_POINTS
+  if (slugs.some((slug) => growth.SUBJECT_PACK_SLUGS.includes(slug))) return 1
+  return 0
 }
 
-// The student's friends that count today, oldest first, with the points and the amount each paid.
+// The student's counted friends today, oldest first, with the points each is worth.
 async function countedFriends(referrerId, now) {
-  const referrals = await Referral.find({ referrer: referrerId, status: { $in: ELIGIBLE_REFERRALS }, eligibleAt: { $lte: now } })
+  const referrals = await Referral.find({ referrer: referrerId, status: { $in: COUNTED_REFERRALS }, eligibleAt: { $lte: now } })
     .select('firstOrder eligibleAt')
     .sort({ eligibleAt: 1, _id: 1 })
     .lean()
   if (referrals.length === 0) return []
   const orders = await Order.find({ _id: { $in: referrals.map((r) => r.firstOrder) }, status: 'paid' })
-    .select('amountPaise productSlug items.slug')
+    .select('productSlug items.slug')
     .lean()
   const byId = new Map(orders.map((o) => [String(o._id), o]))
   return referrals
-    .map((r) => ({ order: byId.get(String(r.firstOrder)), at: r.eligibleAt }))
-    .filter((r) => r.order)
-    .map((r) => ({ points: pointsForOrder(r.order), paidPaise: r.order.amountPaise, at: r.at }))
+    .map((r) => byId.get(String(r.firstOrder)))
+    .filter(Boolean)
+    .map((order) => ({ points: pointsForOrder(order) }))
+    .filter((friend) => friend.points > 0)
 }
 
 // Where the student stands: total points, and for every tier whether it is reached and what its gift is worth.
-// A tier's gift is `percent`% of what the friends paid between the previous tier and this one, rounded down to whole
-// rupees, so all gifts together never exceed that percentage of what friends paid.
 export function tiersFor(friends) {
-  let points = 0
-  let paid = 0
-  const marks = [] // [points, paid so far] after each friend
-  for (const friend of friends) {
-    points += friend.points
-    paid += friend.paidPaise
-    marks.push([points, paid])
-  }
-  let previousPaid = 0
-  const tiers = growth.GIFT_TIERS.map((tier) => {
-    const hit = marks.find(([pts]) => pts >= tier.friends)
-    const basisPaise = (hit ? hit[1] : paid) - previousPaid
-    const valuePaise = Math.floor((basisPaise * tier.percent) / 10000) * 100
-    const result = { friends: tier.friends, percent: tier.percent, reached: Boolean(hit), basisPaise, valuePaise }
-    if (hit) previousPaid = hit[1]
-    return result
-  })
-  return { points, paidPaise: paid, tiers }
+  const points = friends.reduce((sum, friend) => sum + friend.points, 0)
+  const tiers = growth.GIFT_TIERS.map((tier) => ({ friends: tier.friends, valuePaise: tier.valuePaise, reached: points >= tier.friends }))
+  return { points, tiers }
 }
 
 // Creates a gift as "eligible" the first time a tier is reached. A refund that drops the student back below a tier
@@ -67,14 +55,14 @@ export async function evaluateGifts(referrerId, now = new Date()) {
     if (tier.reached) {
       if (!gift) {
         try {
-          await ReferralGift.create({ referrer: referrerId, tier: tier.friends, percent: tier.percent, basisPaise: tier.basisPaise, valuePaise: tier.valuePaise, status: 'eligible', reachedAt: now })
+          await ReferralGift.create({ referrer: referrerId, tier: tier.friends, valuePaise: tier.valuePaise, status: 'eligible', reachedAt: now })
         } catch (err) {
           if (err?.code !== 11000) throw err
         }
       } else if (gift.status === 'eligible' || gift.status === 'not_eligible') {
         await ReferralGift.updateOne(
           { _id: gift._id, status: { $in: ['eligible', 'not_eligible'] } },
-          { $set: { status: 'eligible', percent: tier.percent, basisPaise: tier.basisPaise, valuePaise: tier.valuePaise, ...(gift.status === 'not_eligible' ? { reachedAt: now } : {}) } },
+          { $set: { status: 'eligible', valuePaise: tier.valuePaise, ...(gift.status === 'not_eligible' ? { reachedAt: now } : {}) } },
         )
       }
     } else if (gift?.status === 'eligible') {
@@ -85,7 +73,7 @@ export async function evaluateGifts(referrerId, now = new Date()) {
 }
 
 export async function evaluateAllGifts(now = new Date()) {
-  const referrers = await Referral.distinct('referrer', { status: { $in: ELIGIBLE_REFERRALS } })
+  const referrers = await Referral.distinct('referrer', { status: { $in: COUNTED_REFERRALS } })
   for (const id of referrers) await evaluateGifts(id, now)
   return referrers.length
 }
@@ -94,7 +82,7 @@ export async function evaluateAllGifts(now = new Date()) {
 export async function giftOverview(referrerId, now = new Date()) {
   const standing = await evaluateGifts(referrerId, now)
   const gifts = new Map((await ReferralGift.find({ referrer: referrerId })).map((g) => [g.tier, g]))
-  const waiting = await Referral.find({ referrer: referrerId, status: 'pending' }).select('firstOrder').lean()
+  const waiting = await Referral.find({ referrer: referrerId, status: 'pending', eligibleAt: { $gt: now } }).select('firstOrder').lean()
   const waitingOrders = waiting.length ? await Order.find({ _id: { $in: waiting.map((r) => r.firstOrder) }, status: 'paid' }).select('productSlug items.slug').lean() : []
   const waitingPoints = waitingOrders.reduce((sum, order) => sum + pointsForOrder(order), 0)
 
@@ -102,12 +90,7 @@ export async function giftOverview(referrerId, now = new Date()) {
     const gift = gifts.get(tier.friends)
     const live = gift && gift.status !== 'not_eligible'
     const state = live ? (gift.status === 'eligible' ? 'unlocked' : gift.status) : 'locked' // locked | unlocked | approved | issued
-    return {
-      friends: tier.friends,
-      percent: tier.percent,
-      state,
-      value: (live ? gift.valuePaise : tier.valuePaise) / 100,
-    }
+    return { friends: tier.friends, state, value: (live ? gift.valuePaise : tier.valuePaise) / 100 }
   })
   const next = tiers.find((tier) => tier.state === 'locked') ?? null
   return {
@@ -115,7 +98,7 @@ export async function giftOverview(referrerId, now = new Date()) {
     waitingPoints,
     bigPackPoints: growth.BIG_PACK_POINTS,
     tiers,
-    next: next ? { friends: next.friends, left: Math.max(0, next.friends - standing.points), valueSoFar: next.value } : null,
+    next: next ? { friends: next.friends, left: Math.max(0, next.friends - standing.points), value: next.value } : null,
   }
 }
 

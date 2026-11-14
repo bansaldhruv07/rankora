@@ -32,7 +32,7 @@ router.get('/features', asyncHandler(async (_req, res) => {
     referrals: featureEnabled('referrals'),
     teachers: featureEnabled('teachers'),
     ...(featureEnabled('referrals')
-      ? { friendDiscount: growth.FRIEND_DISCOUNT / 100, referrerCredit: growth.REFERRER_CREDIT / 100, refundWindowDays: growth.REFUND_WINDOW_DAYS, monthlyCap: growth.REFERRAL_MONTHLY_CAP, giftTiers: growth.GIFT_TIERS, bigPackPoints: growth.BIG_PACK_POINTS }
+      ? { friendDiscount: growth.FRIEND_DISCOUNT / 100, referrerCredit: growth.REFERRER_CREDIT / 100, refundWindowDays: growth.REFUND_WINDOW_DAYS, monthlyCap: growth.REFERRAL_MONTHLY_CAP, giftTiers: growth.GIFT_TIERS.map((t) => ({ friends: t.friends, value: t.valuePaise / 100 })), bigPackPoints: growth.BIG_PACK_POINTS }
       : {}),
   })
 }))

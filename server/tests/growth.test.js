@@ -19,7 +19,8 @@ const { commissionFor } = await import('../src/services/growth/sales.js')
 const { flatDiscount, percentDiscount } = await import('../src/services/pricing.js')
 
 const DAY = 86400000
-const DEFAULTS = { ...growth }
+// The shipped default is no refund window; most tests below exercise the window itself, so they start from 7 days.
+const DEFAULTS = { ...growth, REFUND_WINDOW_DAYS: 7 }
 const later = (days = 8) => new Date(Date.now() + days * DAY)
 
 // Products are priced directly in paise so rounding cases can be exact.
@@ -808,14 +809,14 @@ describe('growth: referrals and teacher program', () => {
     beforeEach(() => {
       growth.REFUND_WINDOW_DAYS = 0
       growth.GIFT_TIERS = [
-        { friends: 2, percent: 10 },
-        { friends: 4, percent: 10 },
+        { friends: 2, valuePaise: 50000 },
+        { friends: 4, valuePaise: 150000 },
       ]
     })
     const soon = () => new Date(Date.now() + 5000)
 
     // A new friend arrives through the referrer link and pays for `slug`.
-    async function friendBuys(code, slug = 'n1') {
+    async function friendBuys(code, slug = 'physics-complete') {
       const visitor = client()
       await landing(visitor, { ref: code })
       const friend = await registerUser(visitor)
@@ -825,61 +826,66 @@ describe('growth: referrals and teacher program', () => {
     }
     const codeOf = async (referrer) => (await referrer.agent.get('/api/growth/referrals/me')).body.data.code
     const giftsOf = (referrer) => ReferralGift.find({ referrer: referrer.user.id }).sort({ tier: 1 })
+    const packs = async () => {
+      await note('physics-complete', 20000)
+      await note('chemistry-complete', 20000)
+      await note('mathematics-complete', 20000)
+      await note('jee-complete-pcm', 40000)
+      await note('n1', 10000)
+    }
 
-    it('unlocks a tier at the right number of friends, worth a percent of what they paid', async () => {
-      await note('n1', 10000) // each friend pays 5000 after the friend discount
+    it('unlocks a tier at the right number of subject packs, worth its fixed value, straight away', async () => {
+      await packs()
       const referrer = await registerUser()
       const code = await codeOf(referrer)
-      await friendBuys(code)
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'physics-complete')
       assert.equal(await ReferralGift.countDocuments(), 0)
 
-      await friendBuys(code)
-      await runGrowthMaintenance(soon())
-      await runGrowthMaintenance(soon()) // awarded once only
+      await friendBuys(code, 'chemistry-complete')
+      // No refund window: the gift exists as soon as the payment is confirmed, without waiting for any timer.
       const [gift] = await giftsOf(referrer)
       assert.equal(await ReferralGift.countDocuments(), 1)
       assert.equal(gift.tier, 2)
       assert.equal(gift.status, 'eligible')
-      assert.equal(gift.basisPaise, 10000)
-      assert.equal(gift.valuePaise, 1000) // 10% of 10000 paise = Rs 10
+      assert.equal(gift.valuePaise, 50000)
+      await runGrowthMaintenance(soon()) // awarded once only
+      assert.equal(await ReferralGift.countDocuments(), 1)
 
-      // The next tier is worth 10% of what the friends since the last tier paid, not of everything again.
-      await friendBuys(code)
-      await friendBuys(code)
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'mathematics-complete')
+      await friendBuys(code, 'physics-complete')
       const gifts = await giftsOf(referrer)
-      assert.deepEqual(gifts.map((g) => [g.tier, g.valuePaise]), [[2, 1000], [4, 1000]])
+      assert.deepEqual(gifts.map((g) => [g.tier, g.valuePaise]), [[2, 50000], [4, 150000]])
     })
 
-    it('counts the all-subjects pack as three friends', async () => {
-      await note('n1', 10000)
-      await note('jee-complete-pcm', 40000)
+    it('counts the whole JEE pack as three, and a single note or topic pack as nothing', async () => {
+      await packs()
       const referrer = await registerUser()
       const code = await codeOf(referrer)
-      await friendBuys(code, 'jee-complete-pcm') // 3 points, paid 35000
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'n1') // a single note: no point
       let overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(overview.points, 0)
+
+      await friendBuys(code, 'jee-complete-pcm') // 3 points
+      overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
       assert.equal(overview.points, 3)
       assert.deepEqual(overview.tiers.map((t) => t.state), ['unlocked', 'locked'])
-      assert.equal(overview.tiers[0].value, 35) // 10% of Rs 350
-      assert.deepEqual(overview.next, { friends: 4, left: 1, valueSoFar: 0 })
+      assert.equal(overview.tiers[0].value, 500)
+      assert.deepEqual(overview.next, { friends: 4, left: 1, value: 1500 })
 
-      await friendBuys(code) // one more point reaches tier 4
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'chemistry-complete') // one more point reaches tier 4
       overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
       assert.equal(overview.points, 4)
       assert.equal(overview.tiers[1].state, 'unlocked')
       assert.equal(overview.next, null)
     })
 
-    it('waits out the refund window and shows friends who are still waiting', async () => {
+    it('can still hold rewards back for a refund window when one is configured', async () => {
+      await packs()
       growth.REFUND_WINDOW_DAYS = 7
-      await note('n1', 10000)
       const referrer = await registerUser()
       const code = await codeOf(referrer)
       await friendBuys(code)
-      await friendBuys(code)
+      await friendBuys(code, 'chemistry-complete')
       await runGrowthMaintenance(later(3))
       assert.equal(await ReferralGift.countDocuments(), 0)
       const waiting = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
@@ -890,7 +896,7 @@ describe('growth: referrals and teacher program', () => {
     })
 
     it('does not count a friend who used a teacher code, and sets an unapproved gift back after a refund', async () => {
-      await note('n1', 10000)
+      await packs()
       const admin = await adminAgent()
       const teacher = await teacherByAdmin(admin)
       const referrer = await registerUser()
@@ -900,11 +906,10 @@ describe('growth: referrals and teacher program', () => {
       await landing(visitor, { ref: code })
       const other = await registerUser(visitor)
       await landing(other.agent, { teacher: teacher.code })
-      await confirm((await place(other.agent, { product: 'n1' })).id)
+      await confirm((await place(other.agent, { product: 'physics-complete' })).id)
 
       const a = await friendBuys(code)
-      await friendBuys(code)
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'chemistry-complete')
       assert.equal(await ReferralGift.countDocuments({ status: 'eligible' }), 1)
 
       assert.equal((await refund(admin, a.orderId)).status, 200)
@@ -913,19 +918,17 @@ describe('growth: referrals and teacher program', () => {
       const hidden = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
       assert.equal(hidden.tiers[0].state, 'locked')
 
-      await friendBuys(code) // back to two counted friends
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'mathematics-complete') // back to two counted friends
       assert.equal((await giftsOf(referrer))[0].status, 'eligible')
     })
 
     it('never changes a gift that was already approved, even after a refund', async () => {
-      await note('n1', 10000)
+      await packs()
       const admin = await adminAgent()
       const referrer = await registerUser()
       const code = await codeOf(referrer)
       const a = await friendBuys(code)
-      await friendBuys(code)
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'chemistry-complete')
       const [gift] = await giftsOf(referrer)
       assert.equal((await admin.post(`/api/admin/referral-gifts/${gift._id}/approve`)).status, 200)
       await refund(admin, a.orderId)
@@ -934,26 +937,25 @@ describe('growth: referrals and teacher program', () => {
     })
 
     it('lets an admin approve and then issue a gift, in that order, with a note', async () => {
-      await note('n1', 10000)
+      await packs()
       const admin = await adminAgent()
       const referrer = await registerUser()
       const code = await codeOf(referrer)
       await friendBuys(code)
-      await friendBuys(code)
-      await runGrowthMaintenance(soon())
+      await friendBuys(code, 'chemistry-complete')
       const list = await admin.get('/api/admin/referral-gifts')
       assert.equal(list.status, 200)
       assert.equal(list.body.data.length, 1)
       const gift = list.body.data[0]
       assert.equal(gift.student.email, referrer.user.email)
-      assert.equal(gift.value, 10)
+      assert.equal(gift.value, 500)
 
-      const early = await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({ note: 'PVR voucher' })
+      const early = await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({ note: 'Blinkit card' })
       assert.equal(early.status, 409)
       assert.equal((await admin.post(`/api/admin/referral-gifts/${gift.id}/approve`)).status, 200)
       assert.equal((await admin.post(`/api/admin/referral-gifts/${gift.id}/approve`)).status, 409)
       assert.equal((await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({})).status, 400)
-      const issued = await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({ note: 'PVR voucher sent on WhatsApp' })
+      const issued = await admin.post(`/api/admin/referral-gifts/${gift.id}/issue`).send({ note: 'Blinkit card sent on WhatsApp' })
       assert.equal(issued.status, 200)
       assert.equal(issued.body.data.status, 'issued')
       const overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
@@ -972,6 +974,37 @@ describe('growth: referrals and teacher program', () => {
       }
       growth.referralsEnabled = false
       assert.equal((await admin.get('/api/admin/referral-gifts')).status, 404)
+    })
+  })
+
+  describe('no refunds', () => {
+    it('makes friend credit and teacher commission final as soon as the payment is confirmed', async () => {
+      growth.REFUND_WINDOW_DAYS = 0
+      await note('n1', 10000)
+      await note('n2', 10000)
+      const { referrer, friend } = await referrerAndFriend()
+      await confirm((await place(friend.agent, { product: 'n1' })).id)
+      const overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data
+      assert.equal(overview.balance, 50) // no waiting, no timer
+      assert.equal((await Referral.findOne({ referred: friend.user.id })).status, 'granted')
+
+      const admin = await adminAgent()
+      const teacher = await teacherByAdmin(admin)
+      const { agent } = await registerUser()
+      await landing(agent, { teacher: teacher.code })
+      const { id } = await place(agent, { product: 'n2' })
+      assert.equal((await confirm(id)).commissionStatus, 'payable')
+    })
+
+    it('lets anyone who holds store credit spend it on any later order', async () => {
+      growth.REFUND_WINDOW_DAYS = 0
+      await note('n1', 10000)
+      await note('n2', 10000)
+      const { referrer, friend } = await referrerAndFriend()
+      await confirm((await place(friend.agent, { product: 'n1' })).id)
+      const quote = (await referrer.agent.post('/api/products/n2/quote').send({ useCredit: true })).body.data
+      assert.equal(quote.credit, 50)
+      assert.equal(quote.total < 100, true)
     })
   })
 
@@ -1051,6 +1084,22 @@ describe('growth: referrals and teacher program', () => {
       assert.equal(typedCoupon.total, 80)
     })
 
+    it('is not applied to the whole-JEE pack, which only a teacher code discounts', async () => {
+      await note('jee-complete-pcm', 40000)
+      await welcome()
+      const admin = await adminAgent()
+      const teacher = await teacherByAdmin(admin)
+      const guest = client()
+      const plain = (await guest.post('/api/products/jee-complete-pcm/quote').send({})).body.data
+      assert.equal(plain.discountSource, 'none')
+      assert.equal(plain.autoApplied, false)
+      assert.equal(plain.total, 400)
+      // Even typing the code does not make it cheaper there... it is refused only if it cannot apply; here it is a normal coupon.
+      const withTeacher = (await (await registerUser()).agent.post('/api/products/jee-complete-pcm/quote').send({ coupon: teacher.code })).body.data
+      assert.equal(withTeacher.discountSource, 'teacher')
+      assert.equal(withTeacher.total, 340) // 15% off
+    })
+
     it('is described in the public features, and can be switched off', async () => {
       await note('w1', 10000)
       assert.equal((await client().get('/api/growth/features')).body.data.welcome, null) // no such coupon yet
@@ -1084,7 +1133,7 @@ describe('growth: referrals and teacher program', () => {
 
     it('reports both flags and the rates in the public features endpoint', async () => {
       const res = await client().get('/api/growth/features')
-      assert.deepEqual(res.body.data, { welcome: null, referrals: true, teachers: true, friendDiscount: 50, referrerCredit: 50, refundWindowDays: 7, monthlyCap: 10, giftTiers: growth.GIFT_TIERS, bigPackPoints: 3 })
+      assert.deepEqual(res.body.data, { welcome: null, referrals: true, teachers: true, friendDiscount: 50, referrerCredit: 50, refundWindowDays: 7, monthlyCap: 10, giftTiers: [{ friends: 5, value: 500 }, { friends: 10, value: 1500 }, { friends: 25, value: 5000 }], bigPackPoints: 3 })
     })
 
     it('keeps the unique indexes the programs rely on', async () => {

@@ -48,7 +48,7 @@ const fields = z.object({
   contents: list(300, 60),
   includes: list(300, 40),
   audience: list(300, 20),
-  previewPages: z.array(z.number().int().min(1).max(5000)).max(30),
+  previewPages: z.array(z.number().int().min(1).max(5000)).max(100),
   sortOrder: z.number().int().min(0).max(100000),
   premiumEligible: z.boolean(),
   bundleItems: z.array(z.string()).max(100),
@@ -302,6 +302,28 @@ router.get(
       'Content-Security-Policy': "default-src 'none'",
     })
     res.send(await getObject(product.cover.key))
+  }),
+)
+
+// Sets the free sample for many notes at once: the first `count` pages of each (0 removes the sample). A sample is never
+// the whole note: at least one page always stays locked. `scope` 'empty' only touches notes that have no sample yet.
+router.post(
+  '/sample-pages',
+  asyncHandler(async (req, res) => {
+    const { count, scope } = parse(z.object({ count: z.number().int().min(0).max(100), scope: z.enum(['all', 'empty']).default('all') }), req.body ?? {})
+    const notes = await Product.find({ kind: 'note', 'file.key': { $exists: true } }).select('title previewPages file.pages')
+    let changed = 0
+    for (const note of notes) {
+      if (scope === 'empty' && note.previewPages.length) continue
+      const pages = note.file?.pages ?? 0
+      const take = Math.max(0, Math.min(count, pages - 1))
+      const next = Array.from({ length: take }, (_, i) => i + 1)
+      if (next.join(',') === (note.previewPages ?? []).join(',')) continue
+      await Product.updateOne({ _id: note._id }, { $set: { previewPages: next } })
+      changed += 1
+    }
+    await audit(req, 'product.sample_pages', { type: 'product', summary: `Set the free sample to the first ${count} pages on ${changed} notes (${scope})` })
+    ok(res, { changed, total: notes.length })
   }),
 )
 
