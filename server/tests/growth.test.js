@@ -857,6 +857,31 @@ describe('growth: referrals and teacher program', () => {
       assert.deepEqual(gifts.map((g) => [g.tier, g.valuePaise]), [[2, 50000], [4, 150000]])
     })
 
+    it('counts a friend only after the payment is confirmed: an unpaid or failed order adds nothing', async () => {
+      await packs()
+      const referrer = await registerUser()
+      const code = await codeOf(referrer)
+      const visitor = client()
+      await landing(visitor, { ref: code })
+      const friend = await registerUser(visitor)
+
+      // An order that was placed but never paid.
+      const { id } = await place(friend.agent, { product: 'physics-complete' })
+      let overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(overview.points, 0)
+      assert.equal(overview.waitingPoints, 0)
+
+      // A failed payment still adds nothing.
+      await webhook({ event: 'payment.failed', payload: { payment: { entity: { order_id: (await Order.findById(id)).providerOrderId } } } })
+      overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(overview.points, 0)
+
+      // Once the verified payment arrives, the friend counts.
+      await confirm(id)
+      overview = (await referrer.agent.get('/api/growth/referrals/me')).body.data.gifts
+      assert.equal(overview.points, 1)
+    })
+
     it('counts the whole JEE pack as three, and a single note or topic pack as nothing', async () => {
       await packs()
       const referrer = await registerUser()

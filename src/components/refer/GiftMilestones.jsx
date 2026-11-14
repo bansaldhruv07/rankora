@@ -162,7 +162,7 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
           </div>
         )}
         <p className="text-xs leading-relaxed text-ink-500">
-          *Only friends who buy a complete-subject pack (1 each) or the whole JEE pack ({bigPackPoints}) count, through their first order. Single notes and topic packs do not. Gift cards are checked and sent by us, so allow a few days. The gift card brands and pictures shown are examples and the brand we send may vary.
+          *Only friends who buy a complete-subject pack (1 each) or the whole JEE pack ({bigPackPoints}) count, through their first order, and only once their payment has succeeded. Single notes and topic packs do not. Gift cards are checked and sent by us, so allow a few days. The gift card brands and pictures shown are examples and the brand we send may vary.
         </p>
       </div>
     </section>
