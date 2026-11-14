@@ -186,7 +186,7 @@ function Detail({ product }) {
                           <Button variant="accent" size="lg" icon={Lock} onClick={buy}>
                             Buy now · {formatPrice(product.price)}
                           </Button>
-                          {!isBundle && <AddToCartButton slug={product.slug} size="lg" />}
+                          <AddToCartButton slug={product.slug} size="lg" />
                         </>
                       )}
                       {product.previewPageCount > 0 && (
@@ -352,7 +352,7 @@ function Detail({ product }) {
           <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
             <PriceTag product={product} />
             <div className="flex items-center gap-2">
-              {!isBundle && <AddToCartButton slug={product.slug} variant="soft" label="Add" />}
+              <AddToCartButton slug={product.slug} variant="soft" label="Add" />
               <Button variant="accent" icon={Lock} onClick={buy}>
                 Buy now
               </Button>

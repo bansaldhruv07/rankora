@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, BookOpen, Check, Timer } from 'lucide-react'
+import AddToCartButton from '../cart/AddToCartButton'
+import PriceTag from '../store/PriceTag'
 import Button from '../ui/Button'
+import { useAuth } from '../../hooks/useAuth'
 import { useApi } from '../../hooks/useApi'
 import { useDaysToExam } from '../../hooks/useDaysToExam'
 import { useSampleLink } from '../../hooks/useSampleLink'
@@ -10,7 +13,7 @@ import { ROUTES, notePath } from '../../utils/routes'
 import { cn } from '../../utils/cn'
 import { AtomArt, BulbArt, PencilArt, SparkleArt } from '../common/Clipart'
 
-const HIGHLIGHTS = ['Physics, Chemistry, Maths', 'Class 11, 12 and droppers', 'Free sample', 'Instant access']
+const HIGHLIGHTS = ['Physics, Chemistry, Maths', 'Class 11, 12 & JEE droppers', 'Free sample', 'Instant access']
 
 // The three complete-subject packs, shown as their posters. Left to right: Physics, Chemistry, Maths.
 const POSTERS = [
@@ -80,10 +83,51 @@ function FounderPill() {
   )
 }
 
-// The three subject packs as a fanned stack of posters. Each opens its pack (prices live on Notes and Pricing).
-function PosterFan() {
-  const { data: bundles } = useApi('/products?kind=bundle&limit=20')
-  const bySlug = new Map((bundles ?? []).map((bundle) => [bundle.slug, bundle]))
+// The packs you can put straight in the cart from the home page: price, saving and Add to cart.
+const SHELF = [
+  { slug: 'physics-complete', label: 'Physics' },
+  { slug: 'chemistry-complete', label: 'Chemistry' },
+  { slug: 'mathematics-complete', label: 'Maths' },
+]
+
+function ShelfCard({ bundle, label, wide }) {
+  const { access } = useAuth()
+  const owned = access.productSlugs.includes(bundle.slug)
+  return (
+    <li className={cn('flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-3 shadow-soft', wide ? 'sm:col-span-3' : 'sm:flex-col sm:items-stretch sm:text-center')}>
+      <div className="min-w-0">
+        <Link to={notePath(bundle.slug)} className="text-sm font-semibold text-ink-900 underline-offset-4 hover:text-ember-600 hover:underline">
+          {label}
+        </Link>
+        <PriceTag product={bundle} className={wide ? undefined : 'sm:justify-center'} />
+      </div>
+      {owned ? (
+        <Button to={ROUTES.library} size="sm" variant="soft">
+          In your library
+        </Button>
+      ) : (
+        <AddToCartButton slug={bundle.slug} size="sm" variant="accent" className={cn('shrink-0', !wide && 'sm:w-full')} />
+      )}
+    </li>
+  )
+}
+
+function PackShelf({ bySlug }) {
+  const cards = SHELF.map((item) => ({ ...item, bundle: bySlug.get(item.slug) })).filter((item) => item.bundle)
+  const jee = bySlug.get('jee-complete-pcm')
+  if (cards.length === 0 && !jee) return null
+  return (
+    <ul aria-label="Subject packs" className="mt-6 grid gap-2.5 sm:grid-cols-3">
+      {cards.map((item) => (
+        <ShelfCard key={item.slug} bundle={item.bundle} label={`Complete ${item.label}`} />
+      ))}
+      {jee && <ShelfCard bundle={jee} label="Complete JEE: all three subjects" wide />}
+    </ul>
+  )
+}
+
+// The three subject packs as a fanned stack of posters. Each opens its pack.
+function PosterFan({ bySlug }) {
   return (
     <div className="relative mx-auto aspect-[1/0.64] w-full max-w-md lg:max-w-none">
       {POSTERS.map((poster) => {
@@ -110,6 +154,8 @@ function PosterFan() {
 export default function Hero() {
   const sampleTo = useSampleLink()
   const days = useDaysToExam()
+  const { data: bundles } = useApi('/products?kind=bundle&limit=20')
+  const bySlug = new Map((bundles ?? []).map((bundle) => [bundle.slug, bundle]))
 
   return (
     <section className="relative overflow-hidden border-b border-line-soft">
@@ -166,7 +212,10 @@ export default function Hero() {
           </ul>
         </div>
 
-        <PosterFan />
+        <div>
+          <PosterFan bySlug={bySlug} />
+          <PackShelf bySlug={bySlug} />
+        </div>
       </div>
     </section>
   )

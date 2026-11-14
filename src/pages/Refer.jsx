@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, Gift, Share2, ShoppingBag, UserPlus, Users, Wallet } from 'lucide-react'
 import { WhatsAppIcon } from '../components/common/BrandIcons'
+import GiftCardPair from '../components/refer/GiftCardPair'
 import GiftMilestones from '../components/refer/GiftMilestones'
 import { SparkleArt } from '../components/common/Clipart'
 import Accordion from '../components/ui/Accordion'
@@ -56,31 +57,46 @@ function useCountUp(target) {
   return value
 }
 
-// The "gift ticket": what the friend gets on top, what you get below, split by a perforated line.
+// The "gift ticket": what the friend gets on the left, what you get on the right, split by a perforated line.
 function Ticket({ friend, credit }) {
   return (
-    <div className="animate-float-slow">
-      <div className="relative mx-auto w-full max-w-sm -rotate-2 rounded-3xl border border-line bg-surface shadow-lift transition duration-500 hover:rotate-0 hover:scale-[1.02]">
-        <div className="p-6 pb-7">
-          <p className="font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em] text-ink-500">Your friend gets</p>
-          <p className="mt-2 font-display text-5xl font-semibold leading-none text-ember-600 tabular">{formatPrice(friend)} off</p>
-          <p className="mt-2 text-sm text-ink-600">on their first order, applied automatically</p>
+    <div className="relative rounded-3xl border border-line bg-surface shadow-lift">
+      <div className="grid grid-cols-2">
+        <div className="p-5">
+          <p className="font-mono text-[0.65rem] font-medium uppercase tracking-[0.16em] text-ink-500">Your friend gets</p>
+          <p className="mt-2 font-display text-4xl font-semibold leading-none text-ember-600 tabular sm:text-5xl">{formatPrice(friend)} off</p>
+          <p className="mt-2 text-xs leading-relaxed text-ink-600 sm:text-sm">on their first order, applied automatically</p>
         </div>
-        <div aria-hidden="true" className="relative">
-          <div className="border-t-2 border-dashed border-line" />
-          <span className="absolute -left-3 -top-3 size-6 rounded-full border border-line bg-ivory-50" />
-          <span className="absolute -right-3 -top-3 size-6 rounded-full border border-line bg-ivory-50" />
+        <div className="relative border-l-2 border-dashed border-line p-5">
+          <span aria-hidden="true" className="absolute -left-3 -top-3 size-6 rounded-full border border-line bg-ivory-50" />
+          <span aria-hidden="true" className="absolute -bottom-3 -left-3 size-6 rounded-full border border-line bg-ivory-50" />
+          <p className="font-mono text-[0.65rem] font-medium uppercase tracking-[0.16em] text-ink-500">You get</p>
+          <p className="mt-2 font-display text-4xl font-semibold leading-none text-sage-700 tabular sm:text-5xl">{formatPrice(credit)}</p>
+          <p className="mt-2 text-xs leading-relaxed text-ink-600 sm:text-sm">store credit per friend who buys. Never expires</p>
         </div>
-        <div className="p-6 pt-7">
-          <p className="font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em] text-ink-500">You get</p>
-          <p className="mt-2 font-display text-5xl font-semibold leading-none text-sage-700 tabular">{formatPrice(credit)}</p>
-          <p className="mt-2 text-sm text-ink-600">store credit for every friend who buys</p>
-        </div>
-        <span className="absolute -right-3 -top-4 grid size-11 animate-wiggle place-items-center rounded-full bg-ember-500 text-white shadow-press">
-          <Gift size={20} aria-hidden="true" />
-        </span>
       </div>
+      <span className="absolute -right-3 -top-4 grid size-11 animate-wiggle place-items-center rounded-full bg-ember-500 text-white shadow-press">
+        <Gift size={20} aria-hidden="true" />
+      </span>
     </div>
+  )
+}
+
+// The gift cards you can win, as three big amounts.
+function TierStrip({ tiers }) {
+  if (!tiers?.length) return null
+  return (
+    <ul aria-label="Gift cards you can win" className="grid grid-cols-3 gap-2.5">
+      {tiers.map((tier, index) => (
+        <li key={tier.friends} className="rounded-2xl border border-ember-500/30 bg-ember-50 px-2 py-3 text-center">
+          <p className="font-display text-2xl font-semibold leading-none text-ember-700 tabular sm:text-3xl">{formatPrice(tier.value)}</p>
+          <p className="mt-1.5 text-xs font-medium text-ink-700">
+            {tier.friends}
+            {index === tiers.length - 1 ? '+' : ''} friends
+          </p>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -277,6 +293,8 @@ export default function Refer() {
   const credit = data?.rules.referrerCredit ?? features.referrerCredit ?? 0
   const cap = data?.rules.monthlyCap ?? features.monthlyCap ?? 10
   const bigPack = data?.gifts?.bigPackPoints ?? features.bigPackPoints ?? 3
+  const tiers = data?.gifts?.tiers ?? features.giftTiers ?? []
+  const topGift = tiers.length ? tiers[tiers.length - 1].value : 0
   const link = data ? `${window.location.origin}/?ref=${data.code}` : ''
   const ready = features.loaded && !authLoading
 
@@ -303,15 +321,16 @@ export default function Refer() {
           <div>
             <p className="animate-rise mb-4 inline-flex items-center gap-2 rounded-full border border-ember-500/30 bg-surface px-3.5 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-ember-700 shadow-soft">
               <Gift size={14} aria-hidden="true" />
-              Refer and earn
+              Refer and earn · Gift cards*
             </p>
             <h1 className="animate-rise stagger text-5xl font-semibold leading-[1.05] lg:text-6xl" style={{ '--d': '70ms' }}>
               Give {formatPrice(friend)}.
               <br />
               Get <span className="marker">{formatPrice(credit)}</span>.
+              {topGift > 0 && <span className="mt-3 block text-3xl leading-tight text-ember-600 sm:text-4xl">Win gift cards up to {formatPrice(topGift)}*</span>}
             </h1>
             <p className="animate-rise stagger mt-4 max-w-lg text-base leading-relaxed text-ink-600 sm:text-lg" style={{ '--d': '150ms' }}>
-              Know someone preparing for JEE? Share your link. They save on their first order, and you earn store credit for your next notes.
+              Know someone preparing for JEE? Share your link. They save on their first order and you earn store credit that never expires. Friends who buy a subject pack also move you towards Blinkit and Swiggy gift cards.
             </p>
 
             <div className="animate-rise stagger mt-6 max-w-xl" style={{ '--d': '230ms' }}>
@@ -340,7 +359,11 @@ export default function Refer() {
             </div>
           </div>
 
-          <Ticket friend={friend} credit={credit} />
+          <div className="space-y-5">
+            <GiftCardPair />
+            <Ticket friend={friend} credit={credit} />
+            <TierStrip tiers={tiers} />
+          </div>
         </div>
       </section>
 

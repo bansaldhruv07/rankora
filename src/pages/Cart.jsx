@@ -34,12 +34,16 @@ export default function Cart() {
   useEffect(() => {
     if (!quote || handled.current === quote) return
     handled.current = quote
-    const gone = [...quote.owned, ...quote.unavailable]
+    const gone = [...quote.owned, ...quote.unavailable, ...(quote.covered ?? [])]
     if (!gone.length) return
     remove(...gone)
+    if (!quote.owned.length && !quote.unavailable.length) {
+      toast({ title: 'Already in your pack', description: `${pluralize(gone.length, 'note')} left out because the pack in your cart includes ${gone.length === 1 ? 'it' : 'them'}.`, tone: 'info' })
+      return
+    }
     toast({
-      title: quote.owned.length ? 'Some notes are already yours' : 'Some notes are no longer for sale',
-      description: `${pluralize(gone.length, 'note')} taken out of your cart.`,
+      title: quote.owned.length ? 'Some items are already yours' : 'Some items are no longer for sale',
+      description: `${pluralize(gone.length, 'item')} taken out of your cart.`,
       tone: 'info',
     })
   }, [quote, remove, toast])
@@ -49,7 +53,7 @@ export default function Cart() {
     setPhase('working')
     setError('')
     try {
-      await payOrder({ items: slugs, ...(live.appliedCode ? { coupon: live.appliedCode } : {}), ...(live.useCredit ? { useCredit: true } : {}) }, pluralize(quote.count, 'note'), {
+      await payOrder({ items: slugs, ...(live.appliedCode ? { coupon: live.appliedCode } : {}), ...(live.useCredit ? { useCredit: true } : {}) }, pluralize(quote.count, 'item'), {
         onCheckout: (checkout) => setSandbox(checkout.provider === 'mock'),
       })
       const summary = { count: quote.count, total: quote.total }
@@ -74,7 +78,7 @@ export default function Cart() {
           </span>
           <h1 className="mt-5 text-3xl font-semibold">You&apos;re all set</h1>
           <p className="mx-auto mt-2 max-w-md leading-relaxed text-ink-600">
-            {pluralize(bought.count, 'note')} {bought.count === 1 ? 'is' : 'are'} now in your library. You paid {formatPrice(bought.total)}.
+            {pluralize(bought.count, 'item')} {bought.count === 1 ? 'is' : 'are'} now in your library. You paid {formatPrice(bought.total)}.
           </p>
           <Button to={ROUTES.library} variant="accent" size="lg" icon={BookOpen} className="mt-7">
             Go to my library
@@ -101,7 +105,7 @@ export default function Cart() {
   return (
     <section className="page-container py-10 sm:py-14">
       <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-ember-600">Your cart</p>
-      <h1 className="mt-2 text-4xl font-semibold sm:text-5xl">{pluralize(slugs.length, 'note')} ready to buy</h1>
+      <h1 className="mt-2 text-4xl font-semibold sm:text-5xl">{pluralize(slugs.length, 'item')} ready to buy</h1>
 
       <div className="mt-9 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-12">
         <div>
@@ -157,7 +161,7 @@ export default function Cart() {
 
             <dl className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-ink-600">Subtotal{quote ? ` · ${pluralize(quote.count, 'note')}` : ''}</dt>
+                <dt className="text-ink-600">Subtotal{quote ? ` · ${pluralize(quote.count, 'item')}` : ''}</dt>
                 <dd className="tabular font-semibold text-ink-900">{quote ? formatPrice(quote.list) : '…'}</dd>
               </div>
               {quote?.couponDiscount > 0 && (

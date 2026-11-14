@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Check, Copy, GraduationCap, Gift, Layers } from 'lucide-react'
+import GiftCardPair from '../refer/GiftCardPair'
 import Reveal from '../ui/Reveal'
 import { useApi } from '../../hooks/useApi'
 import { useFeatures } from '../../hooks/useFeatures'
@@ -35,7 +36,7 @@ function CopyCode({ code }) {
 
 // Real offers only: the bundle saving is read live from the catalogue, so it can never drift from the price.
 export default function Offers() {
-  const { loaded, referrals, teachers, welcome, friendDiscount, referrerCredit } = useFeatures()
+  const { loaded, referrals, teachers, welcome, friendDiscount, referrerCredit, giftTiers } = useFeatures()
   // With refer and earn switched on it takes the first slot, so the bundle is only fetched when it is shown.
   const { data: bundles } = useApi(loaded && !referrals ? '/products?kind=bundle&limit=20' : null)
   // The complete-subject pack: its price and the list price it is compared against come straight from the catalogue.
@@ -65,8 +66,21 @@ export default function Offers() {
                 <span className="block">Give {formatPrice(friendDiscount)},</span>
                 <span className="mt-1 block text-ember-400">get {formatPrice(referrerCredit)}</span>
               </p>
-              <p className="mt-2 text-white/75">Share your link. Your friend saves on their first order and you earn store credit for your next notes.</p>
-              <p className="mt-2 text-sm font-semibold text-ember-400">Plus gift cards up to ₹5,000*</p>
+              <p className="mt-2 text-white/75">Share your link. Your friend saves on their first order and you earn store credit that never expires.</p>
+              <GiftCardPair size="sm" className="mt-4" />
+              {giftTiers?.length > 0 && (
+                <>
+                  <p className="mt-4 text-sm font-semibold text-ember-400">Plus gift cards when friends buy a subject pack*</p>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {giftTiers.map((tier, index) => (
+                      <li key={tier.friends} className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold">
+                        {tier.friends}
+                        {index === giftTiers.length - 1 ? '+' : ''} friends · {formatPrice(tier.value)}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
               <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-white">
                 Start earning
                 <ArrowRight size={15} aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1" />

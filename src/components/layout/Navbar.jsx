@@ -67,7 +67,11 @@ export default function Navbar() {
               {({ isActive }) => (
                 <>
                   {link.label}
-                  {link.tag && <span className="ml-2 rounded-full bg-ember-500 px-2 py-0.5 align-middle text-[0.65rem] font-bold uppercase tracking-wide text-white">{link.tag}</span>}
+                  {link.tag && (
+                    <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-ember-500 px-2 text-[0.58rem] font-bold uppercase leading-4 tracking-wider text-white">
+                      {link.tag}
+                    </span>
+                  )}
                   <span
                     aria-hidden="true"
                     className={cn(

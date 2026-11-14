@@ -69,30 +69,6 @@ function Track({ points, tiers, seen }) {
   )
 }
 
-// Two example gift cards, tilted like cards on a table.
-function CardsShowcase() {
-  return (
-    <div aria-hidden="true" className="relative mx-auto mt-6 h-40 w-full max-w-xs shrink-0 sm:h-44 md:mx-0 md:mt-0 md:h-48 md:w-72">
-      <img
-        src="/gifts/swiggy.webp"
-        alt=""
-        width="900"
-        height="600"
-        loading="lazy"
-        className="absolute right-0 top-0 w-[62%] rotate-[6deg] rounded-xl shadow-lift ring-1 ring-black/5 transition duration-300 hover:rotate-[2deg] hover:scale-105"
-      />
-      <img
-        src="/gifts/blinkit.webp"
-        alt=""
-        width="500"
-        height="333"
-        loading="lazy"
-        className="absolute bottom-0 left-0 w-[62%] -rotate-[6deg] rounded-xl shadow-lift ring-1 ring-black/5 transition duration-300 hover:-rotate-[2deg] hover:scale-105"
-      />
-    </div>
-  )
-}
-
 export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, signedIn, onJoin }) {
   const [ref, seen] = useInView()
   const tiers = gifts?.tiers ?? previewTiers.map((tier) => ({ friends: tier.friends, state: 'locked', value: tier.value }))
@@ -105,7 +81,7 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
     <section ref={ref} aria-labelledby="gift-cards" className="overflow-hidden rounded-3xl border border-line bg-surface shadow-soft">
       <div className="relative border-b border-line-soft bg-ember-50 px-6 py-6 sm:px-8">
         <Sparkles aria-hidden="true" className="absolute right-6 top-4 hidden size-6 animate-wiggle text-ember-400 md:block" />
-        <div className="md:flex md:items-center md:justify-between md:gap-8">
+        <div>
           <div>
             <p className="font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em] text-ember-700">Bonus rewards · Gift cards*</p>
             <h2 id="gift-cards" className="mt-1 text-2xl font-semibold sm:text-3xl">
@@ -116,7 +92,6 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
               <span className="marker font-semibold">{bigPackPoints} friends</span>.
             </p>
           </div>
-          <CardsShowcase />
         </div>
       </div>
 
