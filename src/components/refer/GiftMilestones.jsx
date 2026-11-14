@@ -3,9 +3,9 @@ import { Check, Gift, Lock, PartyPopper, Send, Sparkles } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { formatPrice } from '../../utils/format'
 
-// Gift cards for students whose friends keep buying: a progress track with a stop at every tier, and a card per tier.
-// `gifts` is the signed-in student's progress from /growth/referrals/me; signed out, `tiers` (from /growth/features)
-// is shown as a preview with nothing earned yet.
+// Gift cards for students whose friends buy full subjects: a progress track with a stop at every tier, and a card per
+// tier. `gifts` is the signed-in student's progress from /growth/referrals/me; signed out, `previewTiers` (from
+// /growth/features) is shown with nothing earned yet.
 
 const STATE = {
   locked: { label: 'Locked', icon: Lock, tone: 'border-line bg-surface text-ink-600', badge: 'bg-ivory-200 text-ink-600' },
@@ -15,7 +15,7 @@ const STATE = {
 }
 
 const NOTE = {
-  locked: (tier) => `Bring ${tier.friends} friends who buy.`,
+  locked: (tier, last) => `Reach ${tier.friends}${last ? '+' : ''} friends who buy a subject pack.`,
   unlocked: () => 'You did it. We will check it and send your gift card soon.',
   approved: () => 'Approved. Your gift card is on its way to you.',
   issued: () => 'Sent to you. Check your messages and email.',
@@ -50,14 +50,17 @@ function Track({ points, tiers, seen }) {
     <div className="px-4 pb-11 pt-2" role="img" aria-label={`${points} of ${top} friends counted`}>
       <div className="relative h-3 rounded-full bg-ivory-200">
         <div className="h-full rounded-full bg-gradient-to-r from-ember-400 to-ember-500 transition-[width] duration-1000 ease-out" style={{ width: `${fill}%` }} />
-        {tiers.map((tier) => {
+        {tiers.map((tier, index) => {
           const reached = points >= tier.friends
           return (
             <span key={tier.friends} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${(tier.friends / top) * 100}%` }}>
               <span className={cn('grid size-8 place-items-center rounded-full border-2 text-xs font-bold transition-colors duration-500', reached ? 'border-ember-500 bg-ember-500 text-white' : 'border-line bg-surface text-ink-500')}>
                 {reached ? <Check size={14} aria-hidden="true" /> : <Gift size={13} aria-hidden="true" />}
               </span>
-              <span className="absolute left-1/2 top-9 -translate-x-1/2 whitespace-nowrap font-mono text-[0.7rem] font-semibold text-ink-600">{tier.friends}</span>
+              <span className="absolute left-1/2 top-9 -translate-x-1/2 whitespace-nowrap font-mono text-[0.7rem] font-semibold text-ink-600">
+                {tier.friends}
+                {index === tiers.length - 1 ? '+' : ''}
+              </span>
             </span>
           )
         })}
@@ -66,26 +69,55 @@ function Track({ points, tiers, seen }) {
   )
 }
 
+// Two example gift cards, tilted like cards on a table.
+function CardsShowcase() {
+  return (
+    <div aria-hidden="true" className="relative mx-auto mt-6 h-40 w-full max-w-xs shrink-0 sm:h-44 md:mx-0 md:mt-0 md:h-48 md:w-72">
+      <img
+        src="/gifts/swiggy.webp"
+        alt=""
+        width="900"
+        height="600"
+        loading="lazy"
+        className="absolute right-0 top-0 w-[62%] rotate-[6deg] rounded-xl shadow-lift ring-1 ring-black/5 transition duration-300 hover:rotate-[2deg] hover:scale-105"
+      />
+      <img
+        src="/gifts/blinkit.webp"
+        alt=""
+        width="500"
+        height="333"
+        loading="lazy"
+        className="absolute bottom-0 left-0 w-[62%] -rotate-[6deg] rounded-xl shadow-lift ring-1 ring-black/5 transition duration-300 hover:-rotate-[2deg] hover:scale-105"
+      />
+    </div>
+  )
+}
+
 export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, signedIn, onJoin }) {
   const [ref, seen] = useInView()
-  const tiers = gifts?.tiers ?? previewTiers.map((tier) => ({ friends: tier.friends, percent: tier.percent, state: 'locked', value: 0 }))
+  const tiers = gifts?.tiers ?? previewTiers.map((tier) => ({ friends: tier.friends, state: 'locked', value: tier.value }))
   if (tiers.length === 0) return null
   const points = gifts?.points ?? 0
   const next = gifts?.next
-  const percent = tiers[0].percent
+  const biggest = tiers[tiers.length - 1]
 
   return (
     <section ref={ref} aria-labelledby="gift-cards" className="overflow-hidden rounded-3xl border border-line bg-surface shadow-soft">
       <div className="relative border-b border-line-soft bg-ember-50 px-6 py-6 sm:px-8">
-        <Sparkles aria-hidden="true" className="absolute right-6 top-6 size-6 animate-wiggle text-ember-400" />
-        <p className="font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em] text-ember-700">Bonus rewards</p>
-        <h2 id="gift-cards" className="mt-1 text-2xl font-semibold sm:text-3xl">
-          Bring {tiers[0].friends} friends, win a gift card
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-700 sm:text-base">
-          Think movie tickets or a shopping voucher. Every friend who buys counts, and each step up is worth {percent}% of what your friends paid. The all-subjects pack counts as{' '}
-          <span className="marker font-semibold">{bigPackPoints} friends</span> in one go.
-        </p>
+        <Sparkles aria-hidden="true" className="absolute right-6 top-4 hidden size-6 animate-wiggle text-ember-400 md:block" />
+        <div className="md:flex md:items-center md:justify-between md:gap-8">
+          <div>
+            <p className="font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em] text-ember-700">Bonus rewards · Gift cards*</p>
+            <h2 id="gift-cards" className="mt-1 text-2xl font-semibold sm:text-3xl">
+              Refer {tiers[0].friends} friends, win a gift card
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-700 sm:text-base">
+              Gift cards worth up to <strong>{formatPrice(biggest.value)}</strong> from brands like Blinkit and Swiggy. A friend who buys a complete-subject pack counts as 1, and a friend who buys the whole JEE pack counts as{' '}
+              <span className="marker font-semibold">{bigPackPoints} friends</span>.
+            </p>
+          </div>
+          <CardsShowcase />
+        </div>
       </div>
 
       <div className="space-y-6 p-6 sm:p-8">
@@ -102,8 +134,7 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
             </p>
             {signedIn && next && (
               <p className="text-sm text-ink-600">
-                <strong className="text-ink-900">{next.left}</strong> more for your next gift card
-                {next.valueSoFar > 0 && <> · worth {formatPrice(next.valueSoFar)} so far</>}
+                <strong className="text-ink-900">{next.left}</strong> more for your next gift card · worth {formatPrice(next.value)}
               </p>
             )}
             {signedIn && !next && points > 0 && <p className="text-sm font-semibold text-sage-700">Every gift card unlocked. Wow.</p>}
@@ -111,7 +142,7 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
           <Track points={points} tiers={tiers} seen={seen} />
           {signedIn && gifts?.waitingPoints > 0 && (
             <p className="text-xs text-ink-500">
-              {gifts.waitingPoints} more {gifts.waitingPoints === 1 ? 'friend is' : 'friends are'} waiting out the refund window and will be added automatically.
+              {gifts.waitingPoints} more {gifts.waitingPoints === 1 ? 'friend has' : 'friends have'} just paid and will be counted shortly.
             </p>
           )}
         </div>
@@ -120,6 +151,7 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
           {tiers.map((tier, index) => {
             const style = STATE[tier.state] ?? STATE.locked
             const Icon = style.icon
+            const last = index === tiers.length - 1
             return (
               <li
                 key={tier.friends}
@@ -127,23 +159,20 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
                 style={{ transitionDelay: seen ? `${index * 60}ms` : '0ms' }}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-display text-4xl font-semibold leading-none tabular">{tier.friends}</span>
+                  <span className="font-display text-4xl font-semibold leading-none tabular">
+                    {tier.friends}
+                    {last ? '+' : ''}
+                  </span>
                   <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-semibold', style.badge)}>
                     <Icon size={12} aria-hidden="true" />
                     {style.label}
                   </span>
                 </div>
-                <p className="mt-1 text-sm font-medium text-ink-800">friends who buy</p>
+                <p className="mt-1 text-sm font-medium text-ink-800">friends</p>
                 <p className="mt-3 text-sm text-ink-700">
-                  Gift card worth <strong className="text-ink-900">{tier.percent}%</strong> of what they paid
-                  {tier.state !== 'locked' && tier.value > 0 && (
-                    <>
-                      {' '}
-                      · <strong className="text-ember-700">{formatPrice(tier.value)}</strong>
-                    </>
-                  )}
+                  Gift card worth <strong className="font-display text-xl text-ember-700">{formatPrice(tier.value)}</strong>
                 </p>
-                <p className="mt-2 text-xs leading-relaxed text-ink-600">{NOTE[tier.state](tier)}</p>
+                <p className="mt-2 text-xs leading-relaxed text-ink-600">{NOTE[tier.state](tier, last)}</p>
               </li>
             )
           })}
@@ -158,7 +187,7 @@ export default function GiftMilestones({ gifts, previewTiers, bigPackPoints, sig
           </div>
         )}
         <p className="text-xs leading-relaxed text-ink-500">
-          A friend counts once their first order has passed the refund window and has not been refunded. Gift cards are checked and sent by us, so allow a few days.
+          *Only friends who buy a complete-subject pack (1 each) or the whole JEE pack ({bigPackPoints}) count, through their first order. Single notes and topic packs do not. Gift cards are checked and sent by us, so allow a few days. The gift card brands and pictures shown are examples and the brand we send may vary.
         </p>
       </div>
     </section>

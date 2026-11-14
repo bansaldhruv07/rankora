@@ -70,7 +70,7 @@ export default function Pricing() {
                   <span className="font-display text-5xl font-semibold">{formatPrice(subjectPacks[0].price)}</span>
                   {subjectPacks[0].savings && <s className="text-lg text-white/50">{formatPrice(subjectPacks[0].savings.referencePrice)}</s>}
                 </p>
-                <p className="mt-2 text-white/70">Every chapter of one subject, Class 11 and 12.</p>
+                <p className="mt-2 text-white/70">Every chapter of one subject, for Class 11, 12 and droppers.</p>
                 <Bullets dark items={['The whole subject revised before JEE', 'Far cheaper than buying chapters one by one', 'New chapters added to the pack unlock automatically']} />
                 <ul className="mt-6 space-y-2">
                   {subjectPacks.map((pack) => (

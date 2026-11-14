@@ -326,6 +326,25 @@ function Editor({ product, reload }) {
 
           {!isBundle && (
             <Panel title="Free sample" description="Pages anyone can read before buying. They open in the real reader, stamped “SAMPLE”.">
+              <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Quick choices for the free sample">
+                <span className="text-sm text-ink-600">Quick choice:</span>
+                {[0, 1, 2, 3, 5].map((n) => {
+                  const limit = product.file?.pages ? Math.min(n, product.file.pages - 1) : n
+                  const value = Array.from({ length: limit }, (_, i) => i + 1).join(', ')
+                  const active = form.previewPages.replace(/\s/g, '') === value.replace(/\s/g, '')
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setForm((f) => ({ ...f, previewPages: value }))}
+                      className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${active ? 'border-ember-500 bg-ember-500 text-white' : 'border-line text-ink-700 hover:border-ember-500'}`}
+                    >
+                      {n === 0 ? 'No sample' : `First ${n}`}
+                    </button>
+                  )
+                })}
+              </div>
               <Field label="Sample pages" value={form.previewPages} onChange={set('previewPages')} placeholder="e.g. 1-3, 7" error={fieldErrors.previewPages} hint={parsedPreview ? `${parsedPreview.length} ${parsedPreview.length === 1 ? 'page' : 'pages'} will be free.` : 'Use page numbers like 1-3, 7'} />
               {product.hasFile && product.previewPages.length > 0 && !dirty && (
                 <Button to={`/admin/read/${product.id}?sample=1`} variant="outline" size="sm" icon={Eye} className="mt-4">

@@ -32,10 +32,10 @@ const SECTIONS = [
   },
   {
     id: 'refunds',
-    title: 'Refunds',
+    title: 'No refunds',
     body: [
-      'If something is wrong with a purchase, write to us from Account → Support with the order reference. Refund requests are reviewed individually.',
-      'An approved refund is returned to the original payment method through Razorpay, and access to the refunded note ends when the refund is processed.',
+      'All sales are final. Notes are digital and open as soon as you pay, so we do not offer refunds or exchanges.',
+      'If you were charged but did not get access, or were charged twice for the same order, write to us from Account → Support with the order reference and we will put it right.',
     ],
   },
   {
@@ -57,7 +57,7 @@ const SECTIONS = [
 export default function Policies() {
   return (
     <>
-      <PageHeader eyebrow="Policies" title="Clear terms for a digital product" description="How buying, reading, refunds and account use work on JEEdge." />
+      <PageHeader eyebrow="Policies" title="Clear terms for a digital product" description="How buying, reading and account use work on JEEdge. All sales are final." />
       <section className="page-container py-12 sm:py-16">
         <div className="grid gap-12 lg:grid-cols-[14rem_minmax(0,1fr)]">
           <nav aria-label="On this page" className="hidden lg:block">

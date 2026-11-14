@@ -275,7 +275,6 @@ export default function Refer() {
 
   const friend = data?.rules.friendDiscount ?? features.friendDiscount ?? 0
   const credit = data?.rules.referrerCredit ?? features.referrerCredit ?? 0
-  const windowDays = data?.rules.refundWindowDays ?? features.refundWindowDays ?? 7
   const cap = data?.rules.monthlyCap ?? features.monthlyCap ?? 10
   const bigPack = data?.gifts?.bigPackPoints ?? features.bigPackPoints ?? 3
   const link = data ? `${window.location.origin}/?ref=${data.code}` : ''
@@ -284,15 +283,15 @@ export default function Refer() {
   const steps = [
     { icon: Share2, title: 'Share your link', text: `Send it on WhatsApp or post it in a story. Your friend gets ${formatPrice(friend)} off their first order.` },
     { icon: ShoppingBag, title: 'Your friend buys', text: 'They sign up through your link and pay. The discount is applied for them automatically.' },
-    { icon: Wallet, title: 'You earn credit', text: `${windowDays} days later, with no refund, ${formatPrice(credit)} lands in your store credit.` },
+    { icon: Wallet, title: 'You earn credit', text: `As soon as their payment is confirmed, ${formatPrice(credit)} lands in your store credit. It never expires.` },
   ]
 
   const faqs = [
-    { question: 'When do I get my credit?', answer: `${windowDays} days after your friend’s payment is confirmed, as long as they have not asked for a refund. It then shows up in your credit history here.` },
-    { question: 'Where can I spend it?', answer: 'At checkout, on any note. Switch on “Use my store credit” and it is taken off your total.' },
+    { question: 'When do I get my credit?', answer: 'As soon as your friend’s payment is confirmed. It shows up in your credit history here straight away.' },
+    { question: 'Where can I spend it, and does it expire?', answer: 'On any note or pack, on any order, whenever you like. Switch on “Use my store credit” at checkout and it is taken off your total. Store credit never expires.' },
     { question: 'What if my friend uses a teacher’s code?', answer: 'Only one discount applies to an order, and a teacher’s code always comes first. In that case your friend gets the teacher discount and no referral reward is made.' },
-    { question: 'How do the gift cards work?', answer: `When friends who bought through your link reach the milestones, you unlock a gift card worth a share of what they paid. A friend counts once their first order has passed the ${windowDays}-day refund window. The all-subjects pack counts as ${bigPack} friends. We check each gift card and send it to you ourselves.` },
-    { question: 'Are there any limits?', answer: `You earn one reward per friend, up to ${cap} a month. You cannot use your own link, and a reward is taken back if the friend’s order is refunded.` },
+    { question: 'How do the gift cards work?', answer: `Gift cards count full subjects. Each friend who buys a complete-subject pack through your link counts as 1, and a friend who buys the whole JEE pack counts as ${bigPack}. Reach 5, 10 and 25 and you unlock gift cards worth ₹500, ₹1,500 and ₹5,000. Single notes and topic packs earn the ₹${credit} credit but do not count towards gift cards. We check each gift card and send it to you ourselves.` },
+    { question: 'Are there any limits, and can I get a refund?', answer: `You earn one reward per friend, up to ${cap} a month. You cannot use your own link. All sales on JEEdge are final, so there are no refunds.` },
   ]
 
   return (
@@ -378,7 +377,7 @@ export default function Refer() {
               <Stat icon={Users} label="Friends invited" value={data.invited} hint="Signed up through your link" />
               <Stat icon={ShoppingBag} label="Friends who paid" value={data.paid} hint="First order confirmed" />
               <Stat icon={Wallet} label="Credit to use" value={money(data.balance)} hint="Taken off at checkout" />
-              <Stat icon={Gift} label="Credit on the way" value={money(data.pendingCredit)} hint={`Released after ${windowDays} days`} />
+              <Stat icon={Gift} label="Credit on the way" value={money(data.pendingCredit)} hint="Added as soon as a friend pays" />
             </div>
             <div className="mt-6">
               <Tabs

@@ -65,7 +65,7 @@ export default function ReferralGifts() {
           columns={[
             { key: 'student', label: 'Student', render: (g) => <span className="font-semibold">{g.student.name}<span className="ml-2 text-xs font-normal text-ink-500">{g.student.email}</span></span> },
             { key: 'tier', label: 'Milestone', render: (g) => `${g.tier} friends` },
-            { key: 'gift', label: 'Gift card', align: 'right', render: (g) => <span title={`${g.percent}% of ${formatPrice(g.basis)}`}>{formatPrice(g.value)}</span> },
+            { key: 'gift', label: 'Gift card', align: 'right', render: (g) => formatPrice(g.value) },
             { key: 'reached', label: 'Reached', render: (g) => formatLongDate(g.reachedAt) },
             { key: 'status', label: 'Status', render: (g) => <StatusBadge status={BADGE[g.status]}>{LABEL[g.status]}</StatusBadge> },
             { key: 'note', label: 'Note', render: (g) => g.note || '—' },

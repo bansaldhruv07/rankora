@@ -10,7 +10,7 @@ import { ROUTES, notePath } from '../../utils/routes'
 import { cn } from '../../utils/cn'
 import { AtomArt, BulbArt, PencilArt, SparkleArt } from '../common/Clipart'
 
-const HIGHLIGHTS = ['Physics, Chemistry, Maths', 'Class 11 and 12', 'Free sample', 'Instant access']
+const HIGHLIGHTS = ['Physics, Chemistry, Maths', 'Class 11, 12 and droppers', 'Free sample', 'Instant access']
 
 // The three complete-subject packs, shown as their posters. Left to right: Physics, Chemistry, Maths.
 const POSTERS = [

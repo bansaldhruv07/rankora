@@ -11,7 +11,7 @@ import { formatLongDate, formatPrice } from '../utils/format'
 import NotFound from './NotFound'
 
 const STATUS = {
-  pending: { tone: 'neutral', label: 'In refund window' },
+  pending: { tone: 'neutral', label: 'Being confirmed' },
   payable: { tone: 'ember', label: 'Ready to pay' },
   paid: { tone: 'sage', label: 'Paid' },
   refunded: { tone: 'danger', label: 'Refunded' },
@@ -126,8 +126,8 @@ export default function TeacherStats() {
               <Stat icon={IndianRupee} label="Total sales" value={formatPrice(data.stats.sales)} />
               <Stat icon={Wallet} label="Commission earned" value={formatPrice(data.stats.earned)} />
               <Stat icon={BadgeCheck} label="Paid to you" value={formatPrice(data.stats.paid)} />
-              <Stat icon={Clock} label="Pending" value={formatPrice(data.stats.pending)} hint={`Paid out ${data.rules.refundWindowDays} days after each sale, once there is no refund.`} />
-              <Stat icon={Award} label="Qualified students" value={data.stats.qualifiedStudents} hint="Past the refund window and not refunded." />
+              <Stat icon={Clock} label="Pending" value={formatPrice(data.stats.pending)} hint="Becomes payable once the sale is confirmed." />
+              <Stat icon={Award} label="Qualified students" value={data.stats.qualifiedStudents} hint="Different students who have paid." />
             </div>
 
             <Card className="p-5 sm:p-7">
@@ -149,7 +149,7 @@ export default function TeacherStats() {
                 <p className="mt-3 text-sm text-ink-600">You have reached every milestone. Thank you.</p>
               )}
               <p className="mt-3 text-xs leading-relaxed text-ink-500">
-                Only different paying students count, and only after their refund window. Clicks, sign-ups and repeat orders do not.
+                Only different paying students count. Clicks, sign-ups and repeat orders do not.
               </p>
               {data.stats.bonuses.length > 0 && (
                 <ul className="mt-5 divide-y divide-line-soft rounded-xl border border-line">

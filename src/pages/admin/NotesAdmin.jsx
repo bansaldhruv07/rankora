@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, Layers, Plus, Trash2, UploadCloud } from 'lucide-react'
 import { Confirm, ErrorNote, Pager, PageTitle, StatusBadge, Table, INPUT } from '../../components/admin/ui'
+import SamplePagesPanel from '../../components/admin/SamplePagesPanel'
 import UploadPanel from '../../components/admin/UploadPanel'
 import ProductCover from '../../components/store/ProductCover'
 import Button from '../../components/ui/Button'
@@ -161,6 +162,8 @@ export default function NotesAdmin() {
           <UploadPanel onDone={reload} onClose={() => setUploading(false)} />
         </div>
       )}
+
+      {kind === 'note' && <SamplePagesPanel onDone={reload} />}
 
       <Tabs
         tabs={[

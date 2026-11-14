@@ -22,7 +22,7 @@ export default function Navbar() {
   const { user, openAuth } = useAuth()
   const cart = useCart()
   const { referrals } = useFeatures()
-  const links = referrals ? [...LINKS, { to: '/refer', label: 'Refer & earn' }] : LINKS
+  const links = referrals ? [...LINKS, { to: '/refer', label: 'Refer & earn', tag: 'Gift cards*' }] : LINKS
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -67,6 +67,7 @@ export default function Navbar() {
               {({ isActive }) => (
                 <>
                   {link.label}
+                  {link.tag && <span className="ml-2 rounded-full bg-ember-500 px-2 py-0.5 align-middle text-[0.65rem] font-bold uppercase tracking-wide text-white">{link.tag}</span>}
                   <span
                     aria-hidden="true"
                     className={cn(
@@ -155,7 +156,10 @@ export default function Navbar() {
                   )
                 }
               >
-                {link.label}
+                <span>
+                  {link.label}
+                  {link.tag && <span className="ml-2 rounded-full bg-ember-500 px-2 py-0.5 align-middle font-sans text-xs font-bold uppercase tracking-wide text-white">{link.tag}</span>}
+                </span>
                 <ArrowRight size={18} aria-hidden="true" className="text-ink-400" />
               </NavLink>
             ))}

@@ -11,6 +11,7 @@ import { DifficultyBadge, SubjectBadge } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import WelcomeNote from '../components/pricing/WelcomeNote'
+import BundleHighlights from '../components/store/BundleHighlights'
 import EmptyState from '../components/ui/EmptyState'
 import { useAuth } from '../hooks/useAuth'
 import { useApi } from '../hooks/useApi'
@@ -231,6 +232,8 @@ function Detail({ product }) {
 
       <div className="page-container pb-28 pt-12 lg:pb-16">
         <div className="max-w-3xl divide-y divide-line-soft">
+          {isBundle && <BundleHighlights items={items} subject={product.subject} />}
+
           {isBundle && items.length > 0 && (
             <Section eyebrow="In this bundle" title={`${pluralize(items.length, 'note')} you get`}>
               <ul className="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -308,7 +311,7 @@ function Detail({ product }) {
               ))}
             </ul>
             <p className="mt-6 text-sm text-ink-600">
-              Questions about payment, access or refunds? Read the{' '}
+              Questions about payment or access? Read the{' '}
               <Link to={ROUTES.policies} className="font-semibold text-ember-600 underline-offset-4 hover:underline">
                 policies
               </Link>

@@ -66,6 +66,7 @@ export default function Offers() {
                 <span className="mt-1 block text-ember-400">get {formatPrice(referrerCredit)}</span>
               </p>
               <p className="mt-2 text-white/75">Share your link. Your friend saves on their first order and you earn store credit for your next notes.</p>
+              <p className="mt-2 text-sm font-semibold text-ember-400">Plus gift cards up to ₹5,000*</p>
               <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-white">
                 Start earning
                 <ArrowRight size={15} aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1" />

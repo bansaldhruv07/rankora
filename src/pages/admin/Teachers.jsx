@@ -111,7 +111,7 @@ export default function Teachers() {
 
   return (
     <>
-      <PageTitle title="Teachers" description="Offline teachers who share a code with their students. Commission becomes payable after the refund window.">
+      <PageTitle title="Teachers" description="Offline teachers who share a code with their students. Commission becomes payable once the sale is confirmed.">
         <Button variant="accent" icon={Plus} onClick={() => setAdding(true)}>
           Add teacher
         </Button>

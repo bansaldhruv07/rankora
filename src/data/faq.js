@@ -2,7 +2,7 @@ export const FAQ = [
   {
     id: 'what',
     question: 'What do I get?',
-    answer: 'Chapter-wise notes for Physics, Chemistry and Mathematics (Class 11 and 12), built so you can revise a whole subject before JEE. You read them online on your phone or laptop.',
+    answer: 'Chapter-wise notes for Physics, Chemistry and Mathematics (Class 11 and 12, and for droppers), built so you can revise a whole subject before JEE. You read them online on your phone or laptop.',
   },
   {
     id: 'who',
