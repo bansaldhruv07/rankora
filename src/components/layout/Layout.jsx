@@ -3,7 +3,6 @@ import Navbar from './Navbar'
 import OfferBanner from './OfferBanner'
 import Footer from './Footer'
 import ScrollProgress from './ScrollProgress'
-import WhatsAppFloat from './WhatsAppFloat'
 
 export default function Layout() {
   return (
@@ -15,7 +14,6 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
-      <WhatsAppFloat />
     </div>
   )
 }
