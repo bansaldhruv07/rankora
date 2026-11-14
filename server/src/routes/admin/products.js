@@ -10,6 +10,7 @@ import { audit } from '../../services/audit.js'
 import { extendBundleBuyers } from '../../services/entitlements.js'
 import { inspectPdf, sniffImage, slugify, titleFromFilename } from '../../services/pdf.js'
 import { startAdminSession, startSampleSession } from '../../services/reader.js'
+import { standardSamplePages, standardSampleCount } from '../../services/samplePages.js'
 import { deleteObject, getObject, putObject } from '../../services/storage.js'
 import { badRequest, conflict, notFound } from '../../utils/AppError.js'
 import { asyncHandler, assertObjectId, escapeRegex, ok, pageMeta, pageParams, parse } from '../../utils/http.js'
@@ -217,6 +218,8 @@ router.post(
         pricePaise: Math.round(price * 100),
         mrpPaise: Math.round(Math.max(DEFAULT_MRP, price) * 100),
         premiumEligible: true,
+        // The standard free sample for its length; the admin can change it on the note or for every note.
+        previewPages: standardSamplePages(info.pages),
         status: 'draft',
         file,
       })
@@ -250,6 +253,8 @@ router.put(
       product.length = `${info.pages} pages`
     }
     product.previewPages = product.previewPages.filter((n) => n <= info.pages)
+    // A note getting its first PDF starts with the standard sample.
+    if (!previousPages && product.previewPages.length === 0) product.previewPages = standardSamplePages(info.pages)
     await product.save()
     for (const old of dropped) await deleteObject(old.key).catch(() => {})
     await audit(req, 'product.file.replace', { type: 'product', id: product._id, summary: `Replaced PDF of "${product.title}" (v${file.version})`, meta: { pages: info.pages, size: info.size } })
@@ -306,23 +311,28 @@ router.get(
 )
 
 // Sets the free sample for many notes at once: the first `count` pages of each (0 removes the sample). A sample is never
-// the whole note: at least one page always stays locked. `scope` 'empty' only touches notes that have no sample yet.
+// the whole note: at least one page always stays locked. `standard: true` uses the length-based rule instead of one count. `scope` 'empty' only touches notes that have no sample yet.
 router.post(
   '/sample-pages',
   asyncHandler(async (req, res) => {
-    const { count, scope } = parse(z.object({ count: z.number().int().min(0).max(100), scope: z.enum(['all', 'empty']).default('all') }), req.body ?? {})
+    const { count, standard, scope } = parse(
+      z
+        .object({ count: z.number().int().min(0).max(100).optional(), standard: z.boolean().optional(), scope: z.enum(['all', 'empty']).default('all') })
+        .refine((body) => body.standard || body.count !== undefined, { message: 'Choose a number of pages or the standard rule' }),
+      req.body ?? {},
+    )
     const notes = await Product.find({ kind: 'note', 'file.key': { $exists: true } }).select('title previewPages file.pages')
     let changed = 0
     for (const note of notes) {
       if (scope === 'empty' && note.previewPages.length) continue
       const pages = note.file?.pages ?? 0
-      const take = Math.max(0, Math.min(count, pages - 1))
+      const take = standard ? standardSampleCount(pages) : Math.max(0, Math.min(count, pages - 1))
       const next = Array.from({ length: take }, (_, i) => i + 1)
       if (next.join(',') === (note.previewPages ?? []).join(',')) continue
       await Product.updateOne({ _id: note._id }, { $set: { previewPages: next } })
       changed += 1
     }
-    await audit(req, 'product.sample_pages', { type: 'product', summary: `Set the free sample to the first ${count} pages on ${changed} notes (${scope})` })
+    await audit(req, 'product.sample_pages', { type: 'product', summary: standard ? `Set the standard free sample on ${changed} notes (${scope})` : `Set the free sample to the first ${count} pages on ${changed} notes (${scope})` })
     ok(res, { changed, total: notes.length })
   }),
 )

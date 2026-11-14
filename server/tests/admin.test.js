@@ -211,6 +211,29 @@ describe('admin content management', () => {
     assert.equal(bad.status, 201, 'a malformed encoded name must not crash the server')
   })
 
+  it('gives each note the standard free sample for its length, and applies that rule to every note on request', async () => {
+    const admin = await adminAgent()
+    const sampleOf = async (pages) => {
+      const res = await upload(admin, await samplePdf(pages), { filename: `Standard ${pages}.pdf` })
+      assert.equal(res.status, 201)
+      return res.body.data.previewPages
+    }
+    assert.deepEqual(await sampleOf(1), [])
+    assert.deepEqual(await sampleOf(2), [1])
+    assert.deepEqual(await sampleOf(3), [1])
+    assert.deepEqual(await sampleOf(4), [1, 2])
+    assert.deepEqual(await sampleOf(5), [1, 2, 3])
+    assert.deepEqual(await sampleOf(8), [1, 2, 3])
+
+    await makeProduct({ slug: 'st4', pages: 4, previewPages: [1, 2, 3] })
+    await makeProduct({ slug: 'st6', pages: 6 })
+    const applied = await admin.post('/api/admin/products/sample-pages').send({ standard: true, scope: 'all' })
+    assert.equal(applied.status, 200)
+    assert.deepEqual((await Product.findOne({ slug: 'st4' })).previewPages, [1, 2])
+    assert.deepEqual((await Product.findOne({ slug: 'st6' })).previewPages, [1, 2, 3])
+    assert.equal((await admin.post('/api/admin/products/sample-pages').send({ scope: 'all' })).status, 400, 'a count or the standard rule is required')
+  })
+
   it('sets the free sample for many notes at once, always keeping a page locked', async () => {
     const admin = await adminAgent()
     await makeProduct({ slug: 's1', pages: 5 })
@@ -397,7 +420,9 @@ describe('admin content management', () => {
     assert.equal(res.body.data.mode, 'admin')
     assert.equal(res.body.data.watermark.orderRef, 'ADMIN-PREVIEW')
     assert.equal((await PDFDocument.load((await stream(client(), res.body.data.token)).body)).getPageCount(), 3)
-    assert.equal((await admin.post(`/api/admin/products/${id}/preview-session?sample=1`)).status, 409, 'no preview pages set yet')
+    assert.deepEqual(res.body.data.previewPages ?? (await Product.findById(id)).previewPages, [1], 'a 3 page note starts with the standard 1 free page')
+    await admin.patch(`/api/admin/products/${id}`).send({ previewPages: [] })
+    assert.equal((await admin.post(`/api/admin/products/${id}/preview-session?sample=1`)).status, 409, 'no preview pages set')
     await admin.patch(`/api/admin/products/${id}`).send({ previewPages: [2] })
     const sample = await admin.post(`/api/admin/products/${id}/preview-session?sample=1`)
     assert.equal((await PDFDocument.load((await stream(client(), sample.body.data.token)).body)).getPageCount(), 1)

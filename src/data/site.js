@@ -1,11 +1,13 @@
 // Public links, the founders and the exam date. Anything left empty is simply hidden from visitors.
 //
+//   whatsappChat   the number students can chat with on WhatsApp, with country code and no + or spaces
 //   whatsappGroup  the invite link of your WhatsApp group, e.g. https://chat.whatsapp.com/XXXXXXXX
 //   telegram       e.g. https://t.me/yourchannel
 //   instagram      e.g. https://instagram.com/yourhandle
 //   exam           the next JEE date as YYYY-MM-DD. Once set, the home page shows a "days to go" counter.
 //                  Leave it empty until the official date is announced.
 export const SITE = {
+  whatsappChat: '918950751407',
   whatsappGroup: '',
   telegram: '',
   instagram: '',

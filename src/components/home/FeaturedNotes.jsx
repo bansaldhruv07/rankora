@@ -8,11 +8,26 @@ import { useApi } from '../../hooks/useApi'
 import { ROUTES } from '../../utils/routes'
 
 // Live from the catalogue: it shows what is actually on sale, and renders nothing until something is published.
-// The toughest chapters come first (they are what students go looking for), then the rest in book order.
+// A mix of subjects, not one subject's run: the toughest chapters of each subject go first (they are what students go
+// looking for), and the subjects then take turns: Physics, Chemistry, Maths, Physics, ...
+const SUBJECT_ORDER = ['physics', 'chemistry', 'mathematics']
+
+function mixSubjects(products, count) {
+  const lanes = SUBJECT_ORDER.map((subject) => {
+    const own = products.filter((p) => p.subject === subject)
+    return [...own.filter((p) => p.difficulty === 'Hard'), ...own.filter((p) => p.difficulty !== 'Hard')]
+  }).filter((lane) => lane.length > 0)
+  const picked = []
+  for (let round = 0; picked.length < count && lanes.some((lane) => lane[round]); round += 1) {
+    for (const lane of lanes) if (lane[round] && picked.length < count) picked.push(lane[round])
+  }
+  return picked
+}
+
 export default function FeaturedNotes() {
   const { access } = useAuth()
-  const { data: all } = useApi('/products?limit=50&sort=featured')
-  const data = all && [...all.filter((p) => p.difficulty === 'Hard'), ...all.filter((p) => p.difficulty !== 'Hard')].slice(0, 5)
+  const { data: all } = useApi('/products?limit=100&sort=featured')
+  const data = all && mixSubjects(all, 5)
   if (!data?.length) return null
 
   return (
